@@ -1,0 +1,42 @@
+title: Axiom Workflow Engine
+description: Exactly-Once, Crash-Safe Workflow Orchestration
+baseurl: ""
+url: ""
+
+# Theme
+remote_theme: pages-themes/minimal@v0.2.0
+plugins:
+  - jekyll-remote-theme
+
+# Markdown
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+# Collections
+collections:
+  docs:
+    output: true
+    permalink: /:collection/:name
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+
+# Navigation
+header_pages:
+  - index.md
+  - USE_CASES.md
+  - ARCHITECTURE.md
+  - EXAMPLES.md
+
+# Exclude from build
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor

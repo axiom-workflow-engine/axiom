@@ -1,0 +1,17 @@
+apiVersion: v2
+name: axiom-engine
+description: Axiom Workflow Engine — Exactly-once, crash-safe workflow orchestration
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - workflow
+  - orchestration
+  - elixir
+  - event-sourcing
+  - exactly-once
+maintainers:
+  - name: Axiom Team
+home: https://github.com/axiom-workflow-engine/axiom
+sources:
+  - https://github.com/axiom-workflow-engine/axiom

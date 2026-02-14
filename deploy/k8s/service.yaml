@@ -1,0 +1,51 @@
+# ──────────────────────────────────────────────────────────────
+# ClusterIP Service (client-facing)
+# ──────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: axiom-engine
+  namespace: axiom
+  labels:
+    app.kubernetes.io/name: axiom-engine
+    app.kubernetes.io/component: engine
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: axiom-engine
+  ports:
+    - name: http
+      port: 4000
+      targetPort: http
+      protocol: TCP
+
+---
+# ──────────────────────────────────────────────────────────────
+# Headless Service (Erlang node discovery via DNS)
+# ──────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: axiom-engine-headless
+  namespace: axiom
+  labels:
+    app.kubernetes.io/name: axiom-engine
+    app.kubernetes.io/component: engine
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: axiom-engine
+  ports:
+    - name: http
+      port: 4000
+      targetPort: http
+      protocol: TCP
+    - name: epmd
+      port: 4369
+      targetPort: epmd
+      protocol: TCP
+    - name: erlang-dist
+      port: 9100
+      targetPort: erlang-dist
+      protocol: TCP

@@ -1,0 +1,182 @@
+# ──────────────────────────────────────────────────────────────
+# Image
+# ──────────────────────────────────────────────────────────────
+image:
+  repository: ghcr.io/axiom-workflow-engine/axiom
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# ──────────────────────────────────────────────────────────────
+# Replicas & Update Strategy
+# ──────────────────────────────────────────────────────────────
+replicaCount: 3
+podManagementPolicy: Parallel
+
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+
+# ──────────────────────────────────────────────────────────────
+# Service Account
+# ──────────────────────────────────────────────────────────────
+serviceAccount:
+  create: true
+  annotations: {}
+  # eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/axiom-engine
+  name: ""
+
+# ──────────────────────────────────────────────────────────────
+# Axiom Configuration
+# ──────────────────────────────────────────────────────────────
+config:
+  port: 4000
+  durabilityMode: hybrid
+  clusterStrategy: kubernetes
+  rateLimitBackend: ets
+  rateLimitRequestsPerMinute: 100
+  graphqlComplexityLimit: 1000
+  walDataDir: /var/lib/axiom/wal
+  walSegmentSizeMb: 64
+  logLevel: info
+
+# ──────────────────────────────────────────────────────────────
+# Secrets (reference existing k8s secret)
+# ──────────────────────────────────────────────────────────────
+secrets:
+  existingSecret: "" # Use existing secret name, or leave empty to use default
+  erlangCookie: "" # Set via --set secrets.erlangCookie=xxx
+  jwtSecret: "" # Set via --set secrets.jwtSecret=xxx
+
+# ──────────────────────────────────────────────────────────────
+# Persistence (WAL)
+# ──────────────────────────────────────────────────────────────
+persistence:
+  enabled: true
+  storageClass: gp3
+  size: 10Gi
+  accessMode: ReadWriteOnce
+
+# ──────────────────────────────────────────────────────────────
+# Service
+# ──────────────────────────────────────────────────────────────
+service:
+  type: ClusterIP
+  port: 4000
+
+# ──────────────────────────────────────────────────────────────
+# Ingress
+# ──────────────────────────────────────────────────────────────
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  host: axiom.example.com
+  tls:
+    enabled: false
+    secretName: axiom-tls
+
+# ──────────────────────────────────────────────────────────────
+# Resources
+# ──────────────────────────────────────────────────────────────
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+# ──────────────────────────────────────────────────────────────
+# Autoscaling
+# ──────────────────────────────────────────────────────────────
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilization: 70
+  targetMemoryUtilization: 80
+
+# ──────────────────────────────────────────────────────────────
+# Probes
+# ──────────────────────────────────────────────────────────────
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 15
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+startupProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  failureThreshold: 12
+
+# ──────────────────────────────────────────────────────────────
+# Security
+# ──────────────────────────────────────────────────────────────
+podSecurityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  runAsNonRoot: true
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+# ──────────────────────────────────────────────────────────────
+# Network Policy
+# ──────────────────────────────────────────────────────────────
+networkPolicy:
+  enabled: true
+
+# ──────────────────────────────────────────────────────────────
+# Affinity & Tolerations
+# ──────────────────────────────────────────────────────────────
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - axiom-engine
+          topologyKey: kubernetes.io/hostname
+
+tolerations: []
+nodeSelector: {}
+
+# ──────────────────────────────────────────────────────────────
+# Monitoring
+# ──────────────────────────────────────────────────────────────
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    labels: {}

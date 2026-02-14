@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: axiom-config
+  namespace: axiom
+  labels:
+    app.kubernetes.io/name: axiom-engine
+    app.kubernetes.io/component: config
+data:
+  PORT: "4000"
+  DURABILITY_MODE: "hybrid"
+  CLUSTER_STRATEGY: "kubernetes"
+  CLUSTER_KUBERNETES_SELECTOR: "app.kubernetes.io/name=axiom-engine"
+  CLUSTER_KUBERNETES_BASENAME: "axiom-engine"
+  RATE_LIMIT_BACKEND: "ets"
+  RATE_LIMIT_REQUESTS_PER_MINUTE: "100"
+  GRAPHQL_COMPLEXITY_LIMIT: "1000"
+  WAL_DATA_DIR: "/var/lib/axiom/wal"
+  WAL_SEGMENT_SIZE_MB: "64"
+  LOG_LEVEL: "info"
+  RELEASE_DISTRIBUTION: "name"

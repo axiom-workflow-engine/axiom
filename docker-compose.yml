@@ -1,0 +1,92 @@
+name: axiom-cluster
+services:
+  # ──────────────────────────────────────────────────────────────
+  # Primary node
+  # ──────────────────────────────────────────────────────────────
+  axiom:
+    build:
+      context: .
+      args:
+        APP_VERSION: "0.1.0"
+    container_name: axiom-node1
+    hostname: axiom-node1
+    ports:
+      - "4000:4000"   # Phoenix HTTP
+      - "4369:4369"   # EPMD
+    environment:
+      - PORT=4000
+      - MIX_ENV=prod
+      - PHX_SERVER=true
+      - RELEASE_DISTRIBUTION=name
+      - RELEASE_NODE=axiom@axiom-node1
+      - RELEASE_COOKIE=axiom_dev_cookie_change_in_production
+      - CLUSTER_STRATEGY=epmd
+      - CLUSTER_NODES=axiom@axiom-node2
+      - DURABILITY_MODE=hybrid
+      - WAL_DATA_DIR=/var/lib/axiom/wal
+      - RATE_LIMIT_BACKEND=ets
+      - LOG_LEVEL=info
+    volumes:
+      - axiom_wal_node1:/var/lib/axiom/wal
+    networks:
+      - axiom-net
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────────────────────
+  # Second node (cluster testing)
+  # ──────────────────────────────────────────────────────────────
+  axiom-node2:
+    build:
+      context: .
+      args:
+        APP_VERSION: "0.1.0"
+    container_name: axiom-node2
+    hostname: axiom-node2
+    ports:
+      - "4001:4000"
+    environment:
+      - PORT=4000
+      - MIX_ENV=prod
+      - PHX_SERVER=true
+      - RELEASE_DISTRIBUTION=name
+      - RELEASE_NODE=axiom@axiom-node2
+      - RELEASE_COOKIE=axiom_dev_cookie_change_in_production
+      - CLUSTER_STRATEGY=epmd
+      - CLUSTER_NODES=axiom@axiom-node1
+      - DURABILITY_MODE=hybrid
+      - WAL_DATA_DIR=/var/lib/axiom/wal
+      - RATE_LIMIT_BACKEND=ets
+      - LOG_LEVEL=info
+    volumes:
+      - axiom_wal_node2:/var/lib/axiom/wal
+    networks:
+      - axiom-net
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      axiom:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  axiom_wal_node1:
+    driver: local
+  axiom_wal_node2:
+    driver: local
+
+networks:
+  axiom-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

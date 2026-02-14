@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: axiom
+  labels:
+    app.kubernetes.io/name: axiom
+    app.kubernetes.io/part-of: axiom-engine

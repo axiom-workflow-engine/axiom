@@ -1,0 +1,30 @@
+# Build artifacts
+_build/
+deps/
+
+# Version control
+.git/
+.github/
+
+# Data & crash dumps
+data/
+erl_crash.dump
+
+# Documentation
+docs/
+*.md
+LICENSE
+
+# Test & coverage
+cover/
+tmp/
+
+# Editor & IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db

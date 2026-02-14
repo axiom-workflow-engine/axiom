@@ -1,7 +1,7 @@
 title: Axiom Workflow Engine
 description: Exactly-Once, Crash-Safe Workflow Orchestration
-baseurl: ""
-url: ""
+baseurl: "/axiom"
+url: "https://axiom-workflow-engine.github.io"
 
 # Theme — just-the-docs provides navigation, search, and polished styling
 remote_theme: just-the-docs/just-the-docs@v0.10.0

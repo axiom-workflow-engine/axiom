@@ -73,10 +73,3 @@ defmodule AxiomGateway.Endpoint do
     end
   end
 end
-
-defmodule AxiomGateway do
-  @doc """
-  Returns paths for static assets.
-  """
-  def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
-end

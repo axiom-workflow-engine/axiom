@@ -86,6 +86,14 @@ defmodule Axiom.WAL.LogAppendServer do
   end
 
   @doc """
+  Replays all events across all workflows.
+  """
+  @spec replay_all(GenServer.server()) :: {:ok, [Event.t()]} | {:error, term()}
+  def replay_all(server \\ __MODULE__) do
+    GenServer.call(server, :replay_all)
+  end
+
+  @doc """
   Returns current offset.
   """
   @spec current_offset(GenServer.server()) :: non_neg_integer()
@@ -170,6 +178,12 @@ defmodule Axiom.WAL.LogAppendServer do
   @impl true
   def handle_call(:current_offset, _from, state) do
     {:reply, state.current_offset, state}
+  end
+
+  @impl true
+  def handle_call(:replay_all, _from, state) do
+    events = replay_all_events(state.data_dir, state.segment_id)
+    {:reply, {:ok, events}, state}
   end
 
   @impl true
@@ -258,6 +272,27 @@ defmodule Axiom.WAL.LogAppendServer do
             nil -> false
             event -> event.workflow_id == workflow_id
           end)
+
+        {:error, _} ->
+          []
+      end
+    end)
+    |> Enum.sort_by(& &1.sequence)
+  end
+
+  defp replay_all_events(data_dir, max_segment_id) do
+    0..max_segment_id
+    |> Enum.flat_map(fn seg_id ->
+      case Segment.read_all(data_dir, seg_id) do
+        {:ok, entries} ->
+          entries
+          |> Enum.map(fn entry ->
+            case Event.from_binary(entry.payload) do
+              {:ok, event} -> event
+              _ -> nil
+            end
+          end)
+          |> Enum.reject(&is_nil/1)
 
         {:error, _} ->
           []

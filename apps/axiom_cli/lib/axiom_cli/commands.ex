@@ -160,7 +160,20 @@ defmodule Axiom.CLI.Commands do
       pid ->
         offset = Axiom.WAL.LogAppendServer.current_offset(pid)
         IO.puts("Current offset: #{offset}")
-        IO.puts("(Live tail not implemented - would stream new events)")
+
+        # Show recent events by replaying from the WAL
+        case Axiom.WAL.LogAppendServer.replay_all(pid) do
+          {:ok, events} when events != [] ->
+            events
+            |> Enum.take(-count)
+            |> Enum.each(fn event ->
+              IO.puts("  [#{event.sequence}] #{event.event_type} wf=#{short_id(event.workflow_id)} @ #{format_time(event.timestamp)}")
+            end)
+
+          _ ->
+            IO.puts("No events found.")
+        end
+
         :ok
     end
   end
@@ -238,13 +251,44 @@ defmodule Axiom.CLI.Commands do
   # HELPERS
   # ============================================================================
 
-  defp get_workflows(_limit) do
-    # Mock implementation - would query projections
-    {:ok, []}
+  defp get_workflows(limit) do
+    try do
+      workflows = AxiomGateway.Projections.WorkflowIndex.list_workflows(limit)
+      formatted = Enum.map(workflows, fn wf ->
+        %{
+          id: wf.id,
+          name: wf.name,
+          state: String.to_atom(wf.status),
+          completed_steps: 0,
+          total_steps: 0,
+          created_at: wf.created_at
+        }
+      end)
+      {:ok, formatted}
+    rescue
+      _ -> {:ok, []}
+    end
   end
 
-  defp get_workflow(_id) do
-    {:error, :not_found}
+  defp get_workflow(id) do
+    try do
+      case AxiomGateway.Projections.WorkflowIndex.get_workflow(id) do
+        {:ok, wf} ->
+          {:ok, %{
+            id: wf.id,
+            name: wf.name,
+            state: String.to_atom(wf.status),
+            steps: [],
+            step_states: %{},
+            events: [],
+            created_at: wf.created_at
+          }}
+        {:error, :not_found} ->
+          {:error, :not_found}
+      end
+    rescue
+      _ -> {:error, :not_found}
+    end
   end
 
   defp short_id(id) when is_binary(id), do: String.slice(id, 0, 8)

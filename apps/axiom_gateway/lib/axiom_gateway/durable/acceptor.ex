@@ -6,11 +6,19 @@ defmodule AxiomGateway.Durable.Acceptor do
   It routes requests to the authoritative node for the workflow using consistent hashing.
   """
 
+  use GenServer
   require Logger
   alias Axiom.Engine.WorkflowSupervisor
   alias Axiom.Engine.WorkflowProcess
   alias AxiomGateway.Distribution.NodeSelector
   alias AxiomGateway.Schemas.Validator
+
+  def start_link(_opts) do
+    GenServer.start_link(__MODULE__, [], name: __MODULE__)
+  end
+
+  @impl true
+  def init(_), do: {:ok, %{}}
 
   @doc """
   Accepts a workflow creation request.

@@ -105,11 +105,15 @@ defmodule Axiom.API.Metrics do
   end
 
   defp engine_metrics do
-    # Would track workflow counts in production
-    %{
-      active_workflows: 0,
-      completed_workflows: 0,
-      failed_workflows: 0
-    }
+    try do
+      workflows = AxiomGateway.Projections.WorkflowIndex.list_workflows(100_000)
+      %{
+        active_workflows: Enum.count(workflows, &(&1.status == "running")),
+        completed_workflows: Enum.count(workflows, &(&1.status == "completed")),
+        failed_workflows: Enum.count(workflows, &(&1.status == "failed"))
+      }
+    rescue
+      _ -> %{active_workflows: 0, completed_workflows: 0, failed_workflows: 0}
+    end
   end
 end

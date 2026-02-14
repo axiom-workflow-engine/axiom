@@ -9,11 +9,14 @@ defmodule Axiom.API.Workflows do
   Lists workflows with pagination.
   """
   def list(opts \\ []) do
-    _limit = Keyword.get(opts, :limit, 20)
-    _offset = Keyword.get(opts, :offset, 0)
+    limit = Keyword.get(opts, :limit, 20)
 
-    # Would query projections in production
-    {:ok, []}
+    try do
+      workflows = AxiomGateway.Projections.WorkflowIndex.list_workflows(limit)
+      {:ok, workflows}
+    rescue
+      _ -> {:ok, []}
+    end
   end
 
   @doc """

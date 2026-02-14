@@ -22,10 +22,9 @@ defmodule AxiomGateway.Plugs.Auth do
   def init(opts), do: opts
 
   def call(conn, _opts) do
-    conn
-    |> extract_credentials()
-    |> validate_credentials()
-    |> assign_identity()
+    credentials = extract_credentials(conn)
+    result = validate_credentials(credentials)
+    assign_identity(result, conn)
   end
 
   defp extract_credentials(conn) do

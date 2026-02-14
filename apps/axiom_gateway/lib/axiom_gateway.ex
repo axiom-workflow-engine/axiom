@@ -43,4 +43,9 @@ defmodule AxiomGateway do
   def config do
     Application.get_all_env(:axiom_gateway)
   end
+
+  @doc """
+  Returns paths for static assets.
+  """
+  def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
 end

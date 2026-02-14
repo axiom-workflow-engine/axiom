@@ -255,7 +255,12 @@ defmodule Axiom.Scheduler.Dispatcher do
 
     if length(stale) > 0 do
       Logger.warning("[Dispatcher] Removed #{length(stale)} stale workers")
-      # TODO: Re-enqueue their tasks
+      Enum.each(stale, fn {_id, info} ->
+        if info.current_task do
+          TaskQueue.requeue(state.task_queue, info.current_task)
+          Logger.info("[Dispatcher] Re-enqueued task #{info.current_task} from stale worker")
+        end
+      end)
     end
 
     new_state = %{state | workers: Map.new(active)}

@@ -76,6 +76,8 @@ Required environment variables:
 
 - `SECRET_KEY_BASE`: Phoenix secret
 - `PORT`: HTTP port (default 4000)
+- `JWT_SECRET`: Gateway JWT signing/verification secret
+- `RELEASE_COOKIE`: Erlang distribution cookie
 - `AXIOM_API_KEYS`: JSON map of valid API keys
 
 ## Development

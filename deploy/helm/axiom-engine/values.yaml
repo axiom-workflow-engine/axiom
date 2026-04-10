@@ -41,6 +41,9 @@ config:
   rateLimitRequestsPerMinute: 100
   graphqlComplexityLimit: 1000
   walDataDir: /var/lib/axiom/wal
+  leaseDurationMs: 30000
+  workerTimeoutMs: 60000
+  readinessMaxMemoryRatio: 0.9
   walSegmentSizeMb: 64
   logLevel: info
 
@@ -50,6 +53,7 @@ config:
 secrets:
   existingSecret: "" # Use existing secret name, or leave empty to use default
   erlangCookie: "" # Set via --set secrets.erlangCookie=xxx
+  secretKeyBase: "" # Set via --set secrets.secretKeyBase=xxx
   jwtSecret: "" # Set via --set secrets.jwtSecret=xxx
 
 # ──────────────────────────────────────────────────────────────

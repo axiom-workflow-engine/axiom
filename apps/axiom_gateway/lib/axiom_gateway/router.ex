@@ -28,6 +28,10 @@ defmodule AxiomGateway.Router do
     plug AxiomGateway.Plugs.Idempotency
   end
 
+  pipeline :admin_only do
+    plug AxiomGateway.Plugs.RequireAdmin
+  end
+
   # Health checks (unauthenticated)
   scope "/", AxiomGateway.Controllers do
     pipe_through :api
@@ -70,11 +74,14 @@ defmodule AxiomGateway.Router do
     get "/schemas/workflows/:name", SchemaController, :show
     post "/schemas/workflows", SchemaController, :create
 
-    # Admin operations
+  end
+
+  # Admin & cluster operations
+  scope "/api/v1", AxiomGateway.Controllers do
+    pipe_through [:api, :authenticated, :admin_only]
+
     post "/chaos/run", AdminController, :run_chaos
     post "/verify", AdminController, :verify_consistency
-
-    # Cluster Ops
     get "/sys/cluster", ClusterController, :index
     post "/sys/cluster/join", ClusterController, :join
   end

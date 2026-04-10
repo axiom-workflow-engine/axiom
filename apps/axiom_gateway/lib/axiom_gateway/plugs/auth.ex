@@ -54,18 +54,29 @@ defmodule AxiomGateway.Plugs.Auth do
   end
 
   defp validate_credentials({:jwt, token}) do
-    signer = Joken.Signer.create("HS256", Application.get_env(:axiom_gateway, :jwt_secret, "default_secret"))
+    case Application.get_env(:axiom_gateway, :jwt_secret) do
+      nil ->
+        {:error, :jwt_secret_not_configured}
 
-    case Token.verify_and_validate(token, signer) do
-      {:ok, claims} ->
-        {:ok, %{
-          type: :jwt,
-          sub: claims["sub"],
-          role: claims["role"] || "user",
-          tenant_id: claims["tenant_id"] || "default"
-        }}
-      {:error, _reason} ->
-        {:error, :invalid_jwt}
+      "" ->
+        {:error, :jwt_secret_not_configured}
+
+      jwt_secret ->
+        signer = Joken.Signer.create("HS256", jwt_secret)
+
+        case Token.verify_and_validate(token, signer) do
+          {:ok, claims} ->
+            {:ok,
+             %{
+               type: :jwt,
+               sub: claims["sub"],
+               role: claims["role"] || "user",
+               tenant_id: claims["tenant_id"] || "default"
+             }}
+
+          {:error, _reason} ->
+            {:error, :invalid_jwt}
+        end
     end
   end
 

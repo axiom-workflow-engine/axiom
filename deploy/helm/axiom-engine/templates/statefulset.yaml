@@ -86,12 +86,16 @@ spec:
                 secretKeyRef:
                   name: {{ include "axiom-engine.secretName" . }}
                   key: erlang-cookie
+            - name: SECRET_KEY_BASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "axiom-engine.secretName" . }}
+                  key: secret-key-base
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ include "axiom-engine.secretName" . }}
                   key: jwt-secret
-                  optional: true
 
           {{- with .Values.resources }}
           resources:

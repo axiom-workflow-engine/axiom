@@ -20,6 +20,8 @@ services:
       - RELEASE_DISTRIBUTION=name
       - RELEASE_NODE=axiom@axiom-node1
       - RELEASE_COOKIE=axiom_dev_cookie_change_in_production
+      - SECRET_KEY_BASE=axiom_dev_secret_key_base_change_in_production
+      - JWT_SECRET=axiom_dev_jwt_secret_change_in_production
       - CLUSTER_STRATEGY=epmd
       - CLUSTER_NODES=axiom@axiom-node2
       - DURABILITY_MODE=hybrid
@@ -57,6 +59,8 @@ services:
       - RELEASE_DISTRIBUTION=name
       - RELEASE_NODE=axiom@axiom-node2
       - RELEASE_COOKIE=axiom_dev_cookie_change_in_production
+      - SECRET_KEY_BASE=axiom_dev_secret_key_base_change_in_production
+      - JWT_SECRET=axiom_dev_jwt_secret_change_in_production
       - CLUSTER_STRATEGY=epmd
       - CLUSTER_NODES=axiom@axiom-node1
       - DURABILITY_MODE=hybrid

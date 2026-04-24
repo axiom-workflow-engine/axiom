@@ -7,9 +7,7 @@ defmodule AxiomGateway.Schemas.Validator do
   def validate_input(workflow_name, input) do
     # Check if a schema exists for this workflow
     case Store.get_schema(workflow_name) do
-      {:ok, schema_map} ->
-        # Schema exists: MUST validate
-        schema = ExJsonSchema.Schema.resolve(schema_map)
+      {:ok, schema} ->
         case ExJsonSchema.Validator.validate(schema, input) do
           :ok -> :ok
           {:error, errors} ->

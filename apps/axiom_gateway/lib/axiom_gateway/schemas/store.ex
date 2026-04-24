@@ -18,15 +18,13 @@ defmodule AxiomGateway.Schemas.Store do
   end
 
   def register_schema(name, schema_map) do
-    # Validate that it is a valid JSON schema first
     case ExJsonSchema.Schema.resolve(schema_map) do
-      %ExJsonSchema.Schema{} ->
+      {:ok, _schema} ->
         timestamp = DateTime.utc_now()
-        # Persist the schema definition
         :mnesia.dirty_write({@table_name, name, schema_map, timestamp})
         {:ok, name}
 
-      _ ->
+      {:error, _} ->
         {:error, :invalid_json_schema}
     end
   end

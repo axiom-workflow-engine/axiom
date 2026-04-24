@@ -42,6 +42,9 @@ if config_env() == :prod do
   readiness_memory_ratio = Axiom.RuntimeEnv.fetch_float("READINESS_MAX_MEMORY_RATIO", 0.9)
   cors_origins = System.get_env("CORS_ORIGINS", "*") |> String.split(",")
 
+  hammer_expiry_ms = Axiom.RuntimeEnv.fetch_int("HAMMER_EXPIRY_MS", 60_000)
+  hammer_cleanup_interval_ms = Axiom.RuntimeEnv.fetch_int("HAMMER_CLEANUP_INTERVAL_MS", 60_000)
+
   config :axiom_gateway, AxiomGateway.Endpoint,
     http: [ip: {0, 0, 0, 0}, port: port],
     secret_key_base: secret_key_base,
@@ -53,6 +56,11 @@ if config_env() == :prod do
     cors_origins: cors_origins,
     readiness_max_memory_ratio: readiness_memory_ratio,
     release_cookie: release_cookie
+
+  config :hammer,
+    backend: {Hammer.Backend.ETS,
+            [expiry_ms: hammer_expiry_ms,
+             cleanup_interval_ms: hammer_cleanup_interval_ms]}
 
   config :axiom_wal,
     data_dir: wal_data_dir

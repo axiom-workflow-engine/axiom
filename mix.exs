@@ -5,27 +5,9 @@ defmodule Axiom.MixProject do
     [
       apps_path: "apps",
       version: "0.1.0",
+      elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
-      deps: deps(),
-      releases: releases()
-    ]
-  end
-
-  defp releases do
-    [
-      axiom: [
-        include_executables_for: [:unix],
-        applications: [
-          axiom_chaos: :permanent,
-          axiom_core: :permanent,
-          axiom_engine: :permanent,
-          axiom_gateway: :permanent,
-          axiom_projections: :permanent,
-          axiom_scheduler: :permanent,
-          axiom_wal: :permanent,
-          axiom_worker: :permanent
-        ]
-      ]
+      deps: deps()
     ]
   end
 
@@ -35,6 +17,10 @@ defmodule Axiom.MixProject do
   #
   # Run "mix help deps" for examples and options.
   defp deps do
-    []
+    [
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false}
+    ]
   end
 end

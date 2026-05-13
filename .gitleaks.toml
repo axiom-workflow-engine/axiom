@@ -1,0 +1,6 @@
+[allowlist]
+paths = [
+    "apps/axiom_gateway/test/axiom_gateway/auth/api_key_store_test.exs",
+    "deploy/k8s/secrets.example.yaml",
+    "deploy/helm/axiom-engine/templates/secrets.yaml"
+]

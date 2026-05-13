@@ -1,0 +1,9 @@
+# Gitleaks ignore file
+# Use this to ignore false positives in tests or known non-secrets
+
+# Ignore test keys in the API key store tests
+apps/axiom_gateway/test/axiom_gateway/auth/api_key_store_test.exs
+
+# Ignore example secrets
+deploy/k8s/secrets.example.yaml
+deploy/helm/axiom-engine/templates/secrets.yaml

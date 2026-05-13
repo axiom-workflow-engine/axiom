@@ -22,7 +22,7 @@ jobs:
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
         with:
-          elixir-version: "1.17"
+          elixir-version: "1.19"
           otp-version: "27"
 
       - name: Cache deps
@@ -31,7 +31,7 @@ jobs:
           path: |
             deps
             _build
-          key: deps-${{ runner.os }}-otp27-${{ hashFiles('mix.lock') }}
+          key: deps-${{ runner.os }}-otp27-elixir1.19-${{ hashFiles('mix.lock') }}
 
       - name: Install dependencies
         run: mix deps.get

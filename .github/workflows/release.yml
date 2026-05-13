@@ -2,6 +2,7 @@ name: Release
 
 on:
   push:
+    branches: [main]
     tags:
       - "v*"
 
@@ -26,7 +27,7 @@ jobs:
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
         with:
-          elixir-version: "1.17"
+          elixir-version: "1.19"
           otp-version: "27"
 
       - name: Cache deps
@@ -35,7 +36,7 @@ jobs:
           path: |
             deps
             _build
-          key: deps-${{ runner.os }}-otp27-${{ hashFiles('mix.lock') }}
+          key: deps-${{ runner.os }}-otp27-elixir1.19-${{ hashFiles('mix.lock') }}
 
       - name: Install dependencies
         run: mix deps.get
@@ -54,10 +55,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extract version from tag
+      - name: Extract version
         id: meta
         run: |
-          VERSION=${GITHUB_REF_NAME#v}
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF_NAME#v}
+          else
+            VERSION="latest"
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Building version: $VERSION"
 
@@ -84,7 +89,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
             type=sha,prefix=
-            type=raw,value=latest,enable=${{ github.ref == format('refs/tags/v{0}', steps.meta.outputs.version) }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push
         id: build
@@ -104,6 +109,7 @@ jobs:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     needs: build-and-push
+    if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
       - uses: actions/checkout@v4

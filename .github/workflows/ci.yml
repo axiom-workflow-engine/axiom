@@ -12,7 +12,7 @@ concurrency:
 
 env:
   MIX_ENV: test
-  ELIXIR_VERSION: "1.17"
+  ELIXIR_VERSION: "1.19"
 
 jobs:
   compile:
@@ -36,9 +36,9 @@ jobs:
           path: |
             deps
             _build
-          key: deps-${{ runner.os }}-otp${{ matrix.otp }}-${{ hashFiles('mix.lock') }}
+          key: deps-${{ runner.os }}-otp${{ matrix.otp }}-elixir1.19-${{ hashFiles('mix.lock') }}
           restore-keys: |
-            deps-${{ runner.os }}-otp${{ matrix.otp }}-
+            deps-${{ runner.os }}-otp${{ matrix.otp }}-elixir1.19-
 
       - name: Install dependencies
         run: mix deps.get
@@ -140,9 +140,9 @@ jobs:
           path: |
             deps
             _build
-          key: deps-${{ runner.os }}-otp${{ matrix.otp }}-${{ hashFiles('mix.lock') }}
+          key: deps-${{ runner.os }}-otp${{ matrix.otp }}-elixir1.19-${{ hashFiles('mix.lock') }}
           restore-keys: |
-            deps-${{ runner.os }}-otp${{ matrix.otp }}-
+            deps-${{ runner.os }}-otp${{ matrix.otp }}-elixir1.19-
 
       - name: Install dependencies
         run: mix deps.get

@@ -16,7 +16,7 @@ defmodule AxiomEngine do
   def create_workflow(name, input, steps, opts \\ []) do
     workflow_id = Event.generate_uuid()
 
-    case WorkflowSupervisor.start_workflow(workflow_id, opts) do
+    case WorkflowSupervisor.start_workflow(WorkflowSupervisor, workflow_id, opts) do
       {:ok, pid} ->
         case WorkflowProcess.create(pid, name, input, steps) do
           {:ok, ^workflow_id} -> {:ok, workflow_id}

@@ -29,7 +29,7 @@ defmodule AxiomGateway.Durable.Acceptor do
          input = params["input"] || %{},
          :ok <- Validator.validate_input(name, input) do
 
-      workflow_id = params["id"] || UUID.uuid4()
+      workflow_id = params["id"] || Axiom.Core.Event.generate_uuid()
 
       target_node = NodeSelector.select_node(workflow_id)
 

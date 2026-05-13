@@ -100,7 +100,6 @@ defmodule AxiomGateway.Controllers.WorkflowController do
 
     case Acceptor.accept_advancement(id, identity) do
       :ok ->
-      :ok ->
         json(conn, %{status: "advanced"})
 
       error ->

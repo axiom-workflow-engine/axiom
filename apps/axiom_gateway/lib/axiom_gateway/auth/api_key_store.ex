@@ -94,6 +94,7 @@ defmodule AxiomGateway.Auth.ApiKeyStore do
 
   defp init_mnesia do
     nodes = [Node.self()]
+    :mnesia.stop()
     :mnesia.create_schema(nodes)
     :mnesia.start()
 

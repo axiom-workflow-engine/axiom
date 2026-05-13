@@ -9,6 +9,9 @@
 # move said applications out of the umbrella.
 import Config
 
+config :mnesia,
+  dir: ~c"data/mnesia"
+
 config :logger, :default_handler, level: :info
 
 config :logger, :default_formatter,
@@ -36,3 +39,6 @@ config :axiom_gateway, AxiomGateway.Endpoint,
   secret_key_base: "change-me-dev-secret-key-base",
   server: true,
   load_from_system_env: true
+
+config :hammer,
+  backend: {Hammer.Backend.ETS, [expiry_ms: 60_000, cleanup_interval_ms: 60_000]}

@@ -40,11 +40,11 @@ defmodule Axiom.API.Health do
   end
 
   defp check_memory do
-    # Fail if memory usage > 90%
-    memory = :erlang.memory(:total)
-    # Assume 1GB limit for now
-    limit = 1_073_741_824
+    total_memory = :erlang.memory(:total)
 
-    if memory / limit < 0.9, do: :ok, else: :error
+    # Default limit of 2GB if not specified elsewhere
+    limit = Application.get_env(:axiom_projections, :memory_limit_bytes, 2_147_483_648)
+
+    if total_memory < limit * 0.9, do: :ok, else: :error
   end
 end

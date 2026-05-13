@@ -175,12 +175,22 @@ defmodule Axiom.Scheduler.Dispatcher do
   end
 
   @impl true
-  def handle_call({:report_completed, worker_id, lease_id, fencing_token, _result}, _from, state) do
+  def handle_call({:report_completed, worker_id, lease_id, fencing_token, result}, _from, state) do
     # Validate lease and fencing token
     case LeaseManager.validate_for_commit(state.lease_manager, lease_id, fencing_token) do
-      :ok ->
+      {:ok, lease} ->
         # Release the lease
         LeaseManager.release_lease(state.lease_manager, lease_id)
+
+        # Notify the engine of completion
+        duration_ms = div(Event.logical_time() - lease.issued_at, 1_000_000)
+        AxiomEngine.complete_step(lease.workflow_id, lease.step, result, duration_ms)
+
+        # Mark task as completed in queue
+        worker_info = Map.get(state.workers, worker_id)
+        if worker_info && worker_info.current_task do
+          TaskQueue.complete(state.task_queue, worker_info.current_task)
+        end
 
         # Mark worker as idle
         state =
@@ -201,15 +211,18 @@ defmodule Axiom.Scheduler.Dispatcher do
 
   @impl true
   def handle_call(
-        {:report_failed, worker_id, lease_id, fencing_token, _error, retryable},
+        {:report_failed, worker_id, lease_id, fencing_token, error, retryable},
         _from,
         state
       ) do
     # Validate lease and fencing token
     case LeaseManager.validate_for_commit(state.lease_manager, lease_id, fencing_token) do
-      :ok ->
+      {:ok, lease} ->
         # Release the lease
         LeaseManager.release_lease(state.lease_manager, lease_id)
+
+        # Notify the engine of failure
+        AxiomEngine.fail_step(lease.workflow_id, lease.step, error, retryable)
 
         # Mark worker as idle
         state =
@@ -219,8 +232,6 @@ defmodule Axiom.Scheduler.Dispatcher do
             current_task: nil
           })
 
-        # Note: Retry logic would re-enqueue if retryable
-        # For now, just log
         Logger.warning(
           "[Dispatcher] Task failed by worker #{short_id(worker_id)}, retryable=#{retryable}"
         )

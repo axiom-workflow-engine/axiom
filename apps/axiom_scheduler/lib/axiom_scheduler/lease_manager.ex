@@ -167,7 +167,7 @@ defmodule Axiom.Scheduler.LeaseManager do
               {:error, :fencing_token_stale}
 
             true ->
-              :ok
+              {:ok, lease}
           end
       end
 

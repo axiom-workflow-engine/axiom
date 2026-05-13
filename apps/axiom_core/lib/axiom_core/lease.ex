@@ -11,17 +11,19 @@ defmodule Axiom.Core.Lease do
           workflow_id: binary(),
           step: atom(),
           attempt: pos_integer(),
+          issued_at: non_neg_integer(),
           expires_at: non_neg_integer(),
           fencing_token: non_neg_integer()
         }
 
-  @enforce_keys [:lease_id, :workflow_id, :step, :attempt, :expires_at, :fencing_token]
+  @enforce_keys [:lease_id, :workflow_id, :step, :attempt, :issued_at, :expires_at, :fencing_token]
 
   defstruct [
     :lease_id,
     :workflow_id,
     :step,
     :attempt,
+    :issued_at,
     :expires_at,
     :fencing_token
   ]
@@ -36,13 +38,15 @@ defmodule Axiom.Core.Lease do
   @spec new(binary(), atom(), pos_integer(), non_neg_integer(), keyword()) :: t()
   def new(workflow_id, step, attempt, fencing_token, opts \\ []) do
     duration_ms = Keyword.get(opts, :duration_ms, @default_lease_duration_ms)
+    now = Event.logical_time()
 
     %__MODULE__{
       lease_id: Event.generate_uuid(),
       workflow_id: workflow_id,
       step: step,
       attempt: attempt,
-      expires_at: Event.logical_time() + duration_ms * 1_000_000,
+      issued_at: now,
+      expires_at: now + duration_ms * 1_000_000,
       fencing_token: fencing_token
     }
   end

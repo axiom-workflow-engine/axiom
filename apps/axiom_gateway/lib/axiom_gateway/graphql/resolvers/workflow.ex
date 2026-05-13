@@ -64,18 +64,25 @@ defmodule AxiomGateway.GraphQL.Resolvers.Workflow do
   end
 
   defp map_state_to_graphql(sm) do
+    # Get creation time from the first event (at the end of history list)
+    first_event = List.last(sm.history)
+    created_at = if first_event, do: format_timestamp(first_event.timestamp), else: DateTime.utc_now() |> DateTime.to_iso8601()
+    
+    # Get last update time from the newest event (at the head of history list)
+    last_event = List.first(sm.history)
+    updated_at = if last_event, do: format_timestamp(last_event.timestamp), else: created_at
+
     %{
       id: sm.workflow_id,
-      name: "Workflow-#{sm.workflow_id}", # Name might not be in SM state directly, strictly speaking.
-                                          # Ideally SM state includes metadata. For now, ID fallback.
+      name: sm.name || "Workflow-#{sm.workflow_id}",
       status: if(StateMachine.terminal?(sm), do: "completed", else: "running"),
-      created_at: DateTime.utc_now() |> DateTime.to_iso8601(), # Placeholder if SM doesn't track creation time
-      updated_at: DateTime.utc_now() |> DateTime.to_iso8601(),
+      created_at: created_at,
+      updated_at: updated_at,
       steps: Enum.map(sm.step_states, fn {step, status} ->
         %{
           name: Atom.to_string(step),
           status: Atom.to_string(status),
-          attempt: 1, # Simplified
+          attempt: 1,
           result: nil,
           error: nil
         }
@@ -84,10 +91,23 @@ defmodule AxiomGateway.GraphQL.Resolvers.Workflow do
         %{
           sequence: event.sequence,
           event_type: Atom.to_string(event.event_type),
-          timestamp: DateTime.to_iso8601(DateTime.utc_now()),
+          timestamp: format_timestamp(event.timestamp),
           details: Jason.encode!(event.payload)
         }
       end)
     }
+  end
+
+  defp format_timestamp(logical_ns) do
+    # Convert logical nanoseconds back to ISO8601 if possible, or just keep as string
+    # For now, we'll convert to a DateTime if it's based on system time offset
+    # logical_time = monotonic + offset. 
+    # offset = wall_clock - monotonic.
+    # So logical_time is roughly wall_clock in nanoseconds.
+    
+    logical_ns
+    |> div(1_000_000_000)
+    |> DateTime.from_unix!()
+    |> DateTime.to_iso8601()
   end
 end

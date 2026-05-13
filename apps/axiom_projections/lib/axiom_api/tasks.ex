@@ -17,11 +17,12 @@ defmodule Axiom.API.Tasks do
         depth = TaskQueue.depth()
         pending = TaskQueue.list_pending()
 
-        {:ok, %{
-          queue_depth: depth,
-          pending_count: length(pending),
-          pending: format_tasks(pending)
-        }}
+        {:ok,
+         %{
+           queue_depth: depth,
+           pending_count: length(pending),
+           pending: format_tasks(pending)
+         }}
     end
   end
 

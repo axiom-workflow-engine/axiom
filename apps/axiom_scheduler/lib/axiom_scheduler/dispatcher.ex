@@ -17,7 +17,8 @@ defmodule Axiom.Scheduler.Dispatcher do
   defstruct [
     :task_queue,
     :lease_manager,
-    workers: %{},           # %{worker_id => %{status, last_heartbeat, current_task}}
+    # %{worker_id => %{status, last_heartbeat, current_task}}
+    workers: %{},
     worker_timeout_ms: 60_000
   ]
 
@@ -145,20 +146,24 @@ defmodule Axiom.Scheduler.Dispatcher do
       {:ok, task} ->
         # Acquire lease for this task
         case LeaseManager.acquire_lease(
-          state.lease_manager,
-          task.workflow_id,
-          task.step,
-          task.attempt
-        ) do
+               state.lease_manager,
+               task.workflow_id,
+               task.step,
+               task.attempt
+             ) do
           {:ok, lease} ->
             # Update worker as busy
-            state = put_in(state.workers[worker_id], %{
-              status: :busy,
-              last_heartbeat: Event.logical_time(),
-              current_task: task.task_id
-            })
+            state =
+              put_in(state.workers[worker_id], %{
+                status: :busy,
+                last_heartbeat: Event.logical_time(),
+                current_task: task.task_id
+              })
 
-            Logger.info("[Dispatcher] Assigned task #{short_id(task.task_id)} to worker #{short_id(worker_id)}")
+            Logger.info(
+              "[Dispatcher] Assigned task #{short_id(task.task_id)} to worker #{short_id(worker_id)}"
+            )
+
             {:reply, {:task_lease, task, lease}, state}
 
           {:error, reason} ->
@@ -178,11 +183,12 @@ defmodule Axiom.Scheduler.Dispatcher do
         LeaseManager.release_lease(state.lease_manager, lease_id)
 
         # Mark worker as idle
-        state = put_in(state.workers[worker_id], %{
-          status: :idle,
-          last_heartbeat: Event.logical_time(),
-          current_task: nil
-        })
+        state =
+          put_in(state.workers[worker_id], %{
+            status: :idle,
+            last_heartbeat: Event.logical_time(),
+            current_task: nil
+          })
 
         Logger.info("[Dispatcher] Task completed by worker #{short_id(worker_id)}")
         {:reply, :ok, state}
@@ -194,7 +200,11 @@ defmodule Axiom.Scheduler.Dispatcher do
   end
 
   @impl true
-  def handle_call({:report_failed, worker_id, lease_id, fencing_token, _error, retryable}, _from, state) do
+  def handle_call(
+        {:report_failed, worker_id, lease_id, fencing_token, _error, retryable},
+        _from,
+        state
+      ) do
     # Validate lease and fencing token
     case LeaseManager.validate_for_commit(state.lease_manager, lease_id, fencing_token) do
       :ok ->
@@ -202,15 +212,19 @@ defmodule Axiom.Scheduler.Dispatcher do
         LeaseManager.release_lease(state.lease_manager, lease_id)
 
         # Mark worker as idle
-        state = put_in(state.workers[worker_id], %{
-          status: :idle,
-          last_heartbeat: Event.logical_time(),
-          current_task: nil
-        })
+        state =
+          put_in(state.workers[worker_id], %{
+            status: :idle,
+            last_heartbeat: Event.logical_time(),
+            current_task: nil
+          })
 
         # Note: Retry logic would re-enqueue if retryable
         # For now, just log
-        Logger.warning("[Dispatcher] Task failed by worker #{short_id(worker_id)}, retryable=#{retryable}")
+        Logger.warning(
+          "[Dispatcher] Task failed by worker #{short_id(worker_id)}, retryable=#{retryable}"
+        )
+
         {:reply, :ok, state}
 
       {:error, reason} ->
@@ -248,7 +262,8 @@ defmodule Axiom.Scheduler.Dispatcher do
     now = Event.logical_time()
     timeout_ns = state.worker_timeout_ms * 1_000_000
 
-    {stale, active} = state.workers
+    {stale, active} =
+      state.workers
       |> Enum.split_with(fn {_id, info} ->
         now - info.last_heartbeat > timeout_ns
       end)

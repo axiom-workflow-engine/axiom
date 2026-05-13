@@ -27,22 +27,24 @@ defmodule Axiom.API.Workflows do
 
     case AxiomEngine.create_workflow(name, input, steps) do
       {:ok, ^workflow_id} ->
-        {:ok, %{
-          id: workflow_id,
-          name: name,
-          steps: steps,
-          state: "pending",
-          created_at: System.system_time(:millisecond)
-        }}
+        {:ok,
+         %{
+           id: workflow_id,
+           name: name,
+           steps: steps,
+           state: "pending",
+           created_at: System.system_time(:millisecond)
+         }}
 
       {:ok, id} ->
-        {:ok, %{
-          id: id,
-          name: name,
-          steps: steps,
-          state: "pending",
-          created_at: System.system_time(:millisecond)
-        }}
+        {:ok,
+         %{
+           id: id,
+           name: name,
+           steps: steps,
+           state: "pending",
+           created_at: System.system_time(:millisecond)
+         }}
 
       {:error, reason} ->
         {:error, reason}
@@ -57,14 +59,15 @@ defmodule Axiom.API.Workflows do
   def get(id) do
     case AxiomEngine.get_workflow(id) do
       {:ok, state} ->
-        {:ok, %{
-          id: id,
-          name: state.name,
-          steps: state.steps,
-          step_states: state.step_states,
-          state: to_string(state.state),
-          version: state.version
-        }}
+        {:ok,
+         %{
+           id: id,
+           name: state.name,
+           steps: state.steps,
+           step_states: state.step_states,
+           state: to_string(state.state),
+           version: state.version
+         }}
 
       {:error, :not_found} ->
         {:error, :not_found}

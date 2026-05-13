@@ -58,37 +58,40 @@ defmodule Axiom.Engine.StateMachine do
   """
   @spec apply_event(t(), Event.t()) :: t()
   def apply_event(state, %Event{event_type: :workflow_created} = event) do
-    %{state |
-      name: event.payload.name,
-      input: event.payload.input,
-      steps: event.payload.steps,
-      step_states: Map.new(event.payload.steps, fn step -> {step, :pending} end),
-      current_step_index: 0,
-      state: :pending,
-      version: state.version + 1,
-      history: [event | state.history]
+    %{
+      state
+      | name: event.payload.name,
+        input: event.payload.input,
+        steps: event.payload.steps,
+        step_states: Map.new(event.payload.steps, fn step -> {step, :pending} end),
+        current_step_index: 0,
+        state: :pending,
+        version: state.version + 1,
+        history: [event | state.history]
     }
   end
 
   def apply_event(state, %Event{event_type: :step_scheduled} = event) do
     step = event.payload.step
 
-    %{state |
-      step_states: Map.put(state.step_states, step, :scheduled),
-      state: :running,
-      version: state.version + 1,
-      history: [event | state.history]
+    %{
+      state
+      | step_states: Map.put(state.step_states, step, :scheduled),
+        state: :running,
+        version: state.version + 1,
+        history: [event | state.history]
     }
   end
 
   def apply_event(state, %Event{event_type: :step_started} = event) do
     step = event.payload.step
 
-    %{state |
-      step_states: Map.put(state.step_states, step, :running),
-      state: :running,
-      version: state.version + 1,
-      history: [event | state.history]
+    %{
+      state
+      | step_states: Map.put(state.step_states, step, :running),
+        state: :running,
+        version: state.version + 1,
+        history: [event | state.history]
     }
   end
 
@@ -100,51 +103,52 @@ defmodule Axiom.Engine.StateMachine do
     current_idx = Enum.find_index(state.steps, &(&1 == step)) || 0
     next_idx = current_idx + 1
 
-    %{state |
-      step_states: new_step_states,
-      current_step_index: next_idx,
-      state: if(next_idx >= length(state.steps), do: :waiting, else: :running),
-      version: state.version + 1,
-      history: [event | state.history]
+    %{
+      state
+      | step_states: new_step_states,
+        current_step_index: next_idx,
+        state: if(next_idx >= length(state.steps), do: :waiting, else: :running),
+        version: state.version + 1,
+        history: [event | state.history]
     }
   end
 
   def apply_event(state, %Event{event_type: :step_failed} = event) do
     step = event.payload.step
 
-    %{state |
-      step_states: Map.put(state.step_states, step, :failed),
-      error: event.payload.error,
-      state: if(event.payload.retryable, do: :waiting, else: :failed),
-      version: state.version + 1,
-      history: [event | state.history]
+    %{
+      state
+      | step_states: Map.put(state.step_states, step, :failed),
+        error: event.payload.error,
+        state: if(event.payload.retryable, do: :waiting, else: :failed),
+        version: state.version + 1,
+        history: [event | state.history]
     }
   end
 
   def apply_event(state, %Event{event_type: :workflow_completed} = event) do
-    %{state |
-      output: event.payload.output,
-      state: :completed,
-      version: state.version + 1,
-      history: [event | state.history]
+    %{
+      state
+      | output: event.payload.output,
+        state: :completed,
+        version: state.version + 1,
+        history: [event | state.history]
     }
   end
 
   def apply_event(state, %Event{event_type: :workflow_failed} = event) do
-    %{state |
-      error: event.payload.reason,
-      state: :failed,
-      version: state.version + 1,
-      history: [event | state.history]
+    %{
+      state
+      | error: event.payload.reason,
+        state: :failed,
+        version: state.version + 1,
+        history: [event | state.history]
     }
   end
 
   # Fallback for unknown events - just record in history
   def apply_event(state, event) do
-    %{state |
-      version: state.version + 1,
-      history: [event | state.history]
-    }
+    %{state | version: state.version + 1, history: [event | state.history]}
   end
 
   @doc """
@@ -172,7 +176,8 @@ defmodule Axiom.Engine.StateMachine do
   Returns the next step that needs scheduling.
   """
   @spec next_runnable_step(t()) :: atom() | nil
-  def next_runnable_step(%__MODULE__{state: state}) when state in [:completed, :failed, :cancelled] do
+  def next_runnable_step(%__MODULE__{state: state})
+      when state in [:completed, :failed, :cancelled] do
     nil
   end
 

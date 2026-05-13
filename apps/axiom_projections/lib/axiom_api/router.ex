@@ -5,13 +5,16 @@ defmodule Axiom.API.Router do
 
   use Plug.Router
 
-  plug Plug.Logger
-  plug :match
-  plug Plug.Parsers,
+  plug(Plug.Logger)
+  plug(:match)
+
+  plug(Plug.Parsers,
     parsers: [:json],
     pass: ["application/json"],
     json_decoder: Jason
-  plug :dispatch
+  )
+
+  plug(:dispatch)
 
   # ============================================================================
   # HEALTH CHECK
@@ -39,6 +42,7 @@ defmodule Axiom.API.Router do
     case Axiom.API.Workflows.list(limit: limit, offset: offset) do
       {:ok, workflows} ->
         send_json(conn, 200, %{data: workflows, meta: %{limit: limit, offset: offset}})
+
       {:error, reason} ->
         send_json(conn, 500, %{error: inspect(reason)})
     end
@@ -53,6 +57,7 @@ defmodule Axiom.API.Router do
         case Axiom.API.Workflows.create(name, input, step_atoms) do
           {:ok, workflow} ->
             send_json(conn, 201, %{data: workflow})
+
           {:error, reason} ->
             send_json(conn, 400, %{error: inspect(reason)})
         end
@@ -66,6 +71,7 @@ defmodule Axiom.API.Router do
     case Axiom.API.Workflows.get(id) do
       {:ok, workflow} ->
         send_json(conn, 200, %{data: workflow})
+
       {:error, :not_found} ->
         send_json(conn, 404, %{error: "Workflow not found"})
     end
@@ -75,6 +81,7 @@ defmodule Axiom.API.Router do
     case Axiom.API.Workflows.get_events(id) do
       {:ok, events} ->
         send_json(conn, 200, %{data: events})
+
       {:error, :not_found} ->
         send_json(conn, 404, %{error: "Workflow not found"})
     end
@@ -84,6 +91,7 @@ defmodule Axiom.API.Router do
     case Axiom.API.Workflows.advance(id) do
       :ok ->
         send_json(conn, 200, %{status: "advanced"})
+
       {:error, reason} ->
         send_json(conn, 400, %{error: inspect(reason)})
     end
@@ -97,6 +105,7 @@ defmodule Axiom.API.Router do
     case Axiom.API.Tasks.list() do
       {:ok, tasks} ->
         send_json(conn, 200, %{data: tasks})
+
       {:error, reason} ->
         send_json(conn, 500, %{error: inspect(reason)})
     end
@@ -106,6 +115,7 @@ defmodule Axiom.API.Router do
     case Axiom.API.Tasks.list_pending() do
       {:ok, tasks} ->
         send_json(conn, 200, %{data: tasks})
+
       {:error, reason} ->
         send_json(conn, 500, %{error: inspect(reason)})
     end
@@ -156,6 +166,7 @@ defmodule Axiom.API.Router do
     case AxiomChaos.verify() do
       {:ok, result} ->
         send_json(conn, 200, %{status: "passed", data: result})
+
       {:error, result} ->
         send_json(conn, 500, %{status: "failed", data: result})
     end
@@ -165,7 +176,7 @@ defmodule Axiom.API.Router do
   # GRAPHQL
   # ============================================================================
 
-  forward "/graphql", to: Axiom.API.GraphQL.Plug
+  forward("/graphql", to: Axiom.API.GraphQL.Plug)
 
   get "/graphiql" do
     html = """

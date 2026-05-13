@@ -5,12 +5,14 @@ defmodule Axiom.API.GraphQL.Plug do
 
   use Plug.Builder
 
-  plug Plug.Parsers,
+  plug(Plug.Parsers,
     parsers: [:json],
     pass: ["application/json"],
     json_decoder: Jason
+  )
 
-  plug Absinthe.Plug,
+  plug(Absinthe.Plug,
     schema: Axiom.API.GraphQL.Schema,
     json_codec: Jason
+  )
 end

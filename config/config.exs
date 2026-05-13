@@ -9,8 +9,7 @@
 # move said applications out of the umbrella.
 import Config
 
-config :logger, :default_handler,
-  level: :info
+config :logger, :default_handler, level: :info
 
 config :logger, :default_formatter,
   format: "$date $time [$level] $metadata$message\n",

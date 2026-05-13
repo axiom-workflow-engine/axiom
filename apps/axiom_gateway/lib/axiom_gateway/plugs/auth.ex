@@ -48,6 +48,7 @@ defmodule AxiomGateway.Plugs.Auth do
     case AxiomGateway.Auth.ApiKeyStore.validate(key) do
       {:ok, tenant_id} ->
         {:ok, %{type: :api_key, key: key, role: "service", tenant_id: tenant_id}}
+
       {:error, _} ->
         {:error, :invalid_api_key}
     end
@@ -91,6 +92,7 @@ defmodule AxiomGateway.Plugs.Auth do
 
   defp assign_identity({:error, reason}, conn) do
     Logger.warning("Authentication failed: #{inspect(reason)}")
+
     conn
     |> send_resp(401, Jason.encode!(%{error: reason}))
     |> halt()

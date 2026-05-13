@@ -1,7 +1,7 @@
 defmodule AxiomGateway.Controllers.TaskController do
   use Phoenix.Controller
 
-  action_fallback AxiomGateway.Controllers.FallbackController
+  action_fallback(AxiomGateway.Controllers.FallbackController)
 
   def index(conn, _params) do
     tasks = list_tasks()

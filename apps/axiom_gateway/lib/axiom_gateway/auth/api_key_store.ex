@@ -26,6 +26,7 @@ defmodule AxiomGateway.Auth.ApiKeyStore do
     case parse_key(raw_key) do
       {:ok, prefix, _secret} ->
         lookup_and_verify(raw_key, prefix)
+
       :error ->
         {:error, :invalid_format}
     end
@@ -51,16 +52,17 @@ defmodule AxiomGateway.Auth.ApiKeyStore do
 
   defp lookup_and_verify(raw_key, _prefix) do
     with {:ok, id, secret} <- split_id_secret(raw_key) do
-       case :mnesia.dirty_read(@table_name, id) do
-         [{_, ^id, stored_hash, tenant_id, _}] ->
-           if verify_hash(secret, stored_hash) do
-             {:ok, tenant_id}
-           else
-             {:error, :invalid_key}
-           end
-         [] ->
-           {:error, :not_found}
-       end
+      case :mnesia.dirty_read(@table_name, id) do
+        [{_, ^id, stored_hash, tenant_id, _}] ->
+          if verify_hash(secret, stored_hash) do
+            {:ok, tenant_id}
+          else
+            {:error, :invalid_key}
+          end
+
+        [] ->
+          {:error, :not_found}
+      end
     else
       _ -> {:error, :invalid}
     end
@@ -69,17 +71,17 @@ defmodule AxiomGateway.Auth.ApiKeyStore do
   # Key format: ak_live_<public_id>_<secret>
   defp split_id_secret(key) do
     case String.split(key, "_") do
-       ["ak", type, id, secret] -> {:ok, "ak_#{type}_#{id}", secret}
-       _ -> :error
+      ["ak", type, id, secret] -> {:ok, "ak_#{type}_#{id}", secret}
+      _ -> :error
     end
   end
 
   defp parse_key(key) do
-     if String.starts_with?(key, "ak_") do
-       {:ok, String.slice(key, 0, 8), key}
-     else
-       :error
-     end
+    if String.starts_with?(key, "ak_") do
+      {:ok, String.slice(key, 0, 8), key}
+    else
+      :error
+    end
   end
 
   defp hash_key(secret) do
@@ -95,11 +97,11 @@ defmodule AxiomGateway.Auth.ApiKeyStore do
     :mnesia.create_schema(nodes)
     :mnesia.start()
 
-    case :mnesia.create_table(@table_name, [
+    case :mnesia.create_table(@table_name,
            attributes: [:id, :hash, :tenant_id, :created_at],
            disc_copies: nodes,
            type: :set
-         ]) do
+         ) do
       {:atomic, :ok} -> Logger.info("Created API Key store")
       {:aborted, {:already_exists, _}} -> :ok
       error -> Logger.error("Failed to create API Key store: #{inspect(error)}")

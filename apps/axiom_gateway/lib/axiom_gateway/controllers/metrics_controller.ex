@@ -3,7 +3,8 @@ defmodule AxiomGateway.Controllers.MetricsController do
 
   def index(conn, _params) do
     metrics =
-      if Code.ensure_loaded?(Axiom.API.Metrics) and function_exported?(Axiom.API.Metrics, :collect, 0) do
+      if Code.ensure_loaded?(Axiom.API.Metrics) and
+           function_exported?(Axiom.API.Metrics, :collect, 0) do
         Axiom.API.Metrics.collect()
       else
         fallback_metrics()

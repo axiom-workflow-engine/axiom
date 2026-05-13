@@ -21,7 +21,7 @@ defmodule Axiom.API.GraphQL.Schema do
     field :created_at, :integer
 
     field :events, list_of(:event) do
-      resolve &WorkflowResolver.get_events/3
+      resolve(&WorkflowResolver.get_events/3)
     end
   end
 
@@ -102,10 +102,10 @@ defmodule Axiom.API.GraphQL.Schema do
   # Custom JSON scalar for flexible payloads
   scalar :json, name: "JSON" do
     serialize &Jason.encode!/1
-    parse fn
+    parse(fn
       %Absinthe.Blueprint.Input.String{value: value} -> Jason.decode(value)
       _ -> :error
-    end
+    end)
   end
 
   # ============================================================================
@@ -115,37 +115,37 @@ defmodule Axiom.API.GraphQL.Schema do
   query do
     @desc "Get a workflow by ID"
     field :workflow, :workflow do
-      arg :id, non_null(:id)
-      resolve &WorkflowResolver.get/3
+      arg(:id, non_null(:id))
+      resolve(&WorkflowResolver.get/3)
     end
 
     @desc "List all workflows"
     field :workflows, list_of(:workflow) do
-      arg :limit, :integer, default_value: 20
-      arg :offset, :integer, default_value: 0
-      resolve &WorkflowResolver.list/3
+      arg(:limit, :integer, default_value: 20)
+      arg(:offset, :integer, default_value: 0)
+      resolve(&WorkflowResolver.list/3)
     end
 
     @desc "Get task queue status"
     field :tasks, :task_stats do
-      resolve &TaskResolver.get_stats/3
+      resolve(&TaskResolver.get_stats/3)
     end
 
     @desc "Get system metrics"
     field :metrics, :metrics do
-      resolve &MetricsResolver.get/3
+      resolve(&MetricsResolver.get/3)
     end
 
     @desc "Get health status"
     field :health, :health do
-      resolve fn _, _, _ ->
+      resolve(fn _, _, _ ->
         {:ok, Axiom.API.Health.check_all()}
-      end
+      end)
     end
 
     @desc "List chaos scenarios"
     field :chaos_scenarios, list_of(:chaos_scenario) do
-      resolve &ChaosResolver.list/3
+      resolve(&ChaosResolver.list/3)
     end
   end
 
@@ -156,28 +156,28 @@ defmodule Axiom.API.GraphQL.Schema do
   mutation do
     @desc "Create a new workflow"
     field :create_workflow, :workflow do
-      arg :name, non_null(:string)
-      arg :steps, non_null(list_of(:string))
-      arg :input, :json
-      resolve &WorkflowResolver.create/3
+      arg(:name, non_null(:string))
+      arg(:steps, non_null(list_of(:string)))
+      arg(:input, :json)
+      resolve(&WorkflowResolver.create/3)
     end
 
     @desc "Advance a workflow to next step"
     field :advance_workflow, :mutation_result do
-      arg :id, non_null(:id)
-      resolve &WorkflowResolver.advance/3
+      arg(:id, non_null(:id))
+      resolve(&WorkflowResolver.advance/3)
     end
 
     @desc "Run a chaos scenario"
     field :run_chaos, :mutation_result do
-      arg :scenario, non_null(:string)
-      arg :duration_ms, :integer, default_value: 10_000
-      resolve &ChaosResolver.run/3
+      arg(:scenario, non_null(:string))
+      arg(:duration_ms, :integer, default_value: 10_000)
+      resolve(&ChaosResolver.run/3)
     end
 
     @desc "Verify system consistency"
     field :verify, :mutation_result do
-      resolve &ChaosResolver.verify/3
+      resolve(&ChaosResolver.verify/3)
     end
   end
 
@@ -188,18 +188,18 @@ defmodule Axiom.API.GraphQL.Schema do
   subscription do
     @desc "Subscribe to workflow events"
     field :workflow_events, :event do
-      arg :workflow_id, non_null(:id)
+      arg(:workflow_id, non_null(:id))
 
-      config fn args, _context ->
+      config(fn args, _context ->
         {:ok, topic: "workflow:#{args.workflow_id}"}
-      end
+      end)
     end
 
     @desc "Subscribe to task updates"
     field :task_updates, :task do
-      config fn _args, _context ->
+      config(fn _args, _context ->
         {:ok, topic: "tasks"}
-      end
+      end)
     end
   end
 end

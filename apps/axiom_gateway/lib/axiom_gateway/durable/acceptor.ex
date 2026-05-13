@@ -41,6 +41,7 @@ defmodule AxiomGateway.Durable.Acceptor do
     else
       {:error, {:schema_validation_failed, errors}} ->
         {:error, {:bad_request, errors}}
+
       {:error, reason} ->
         {:error, {:bad_request, reason}}
     end
@@ -77,8 +78,8 @@ defmodule AxiomGateway.Durable.Acceptor do
 
   def advance_local(workflow_id) do
     case find_process(workflow_id) do
-       {:ok, pid} -> WorkflowProcess.advance(pid)
-       {:error, :not_found} -> {:error, :not_found}
+      {:ok, pid} -> WorkflowProcess.advance(pid)
+      {:error, :not_found} -> {:error, :not_found}
     end
   end
 
@@ -87,23 +88,27 @@ defmodule AxiomGateway.Durable.Acceptor do
   defp start_and_create_local(workflow_id, name, input, steps) do
     case WorkflowSupervisor.start_workflow(Axiom.Engine.WorkflowSupervisor, workflow_id) do
       {:ok, pid} ->
-         create_in_process(pid, workflow_id, name, input, steps)
+        create_in_process(pid, workflow_id, name, input, steps)
 
       {:error, {:already_started, pid}} ->
-         create_in_process(pid, workflow_id, name, input, steps)
+        create_in_process(pid, workflow_id, name, input, steps)
 
       {:error, reason} ->
-         Logger.error("Failed to start workflow process locally: #{inspect(reason)}")
-         {:error, :internal_server_error}
+        Logger.error("Failed to start workflow process locally: #{inspect(reason)}")
+        {:error, :internal_server_error}
     end
   end
 
   defp rpc_create_remote(node, workflow_id, name, input, steps) do
     # 5 second timeout for remote creation to prevent locking the gateway
     try do
-      :erpc.call(node, fn ->
-        start_and_create_local(workflow_id, name, input, steps)
-      end, 5000)
+      :erpc.call(
+        node,
+        fn ->
+          start_and_create_local(workflow_id, name, input, steps)
+        end,
+        5000
+      )
     rescue
       e in [ErlangError] ->
         Logger.error("RPC to node #{inspect(node)} failed: #{inspect(e)}")
@@ -134,9 +139,11 @@ defmodule AxiomGateway.Durable.Acceptor do
   end
 
   defp validate_steps(steps) when is_list(steps) and length(steps) > 0 do
-    atom_steps = Enum.map(steps, fn s ->
-      if is_atom(s), do: s, else: String.to_atom(s)
-    end)
+    atom_steps =
+      Enum.map(steps, fn s ->
+        if is_atom(s), do: s, else: String.to_atom(s)
+      end)
+
     {:ok, atom_steps}
   end
 

@@ -113,10 +113,7 @@ defmodule Axiom.Scheduler.TaskQueue do
     }
 
     new_queue = :queue.in(task, state.queue)
-    new_state = %{state |
-      queue: new_queue,
-      task_count: state.task_count + 1
-    }
+    new_state = %{state | queue: new_queue, task_count: state.task_count + 1}
 
     Logger.debug("[TaskQueue] Enqueued task #{short_id(task_id)} for #{workflow_id}:#{step}")
     {:reply, {:ok, task_id}, new_state}
@@ -126,9 +123,10 @@ defmodule Axiom.Scheduler.TaskQueue do
   def handle_call(:pull, _from, state) do
     case :queue.out(state.queue) do
       {{:value, task}, new_queue} ->
-        new_state = %{state |
-          queue: new_queue,
-          pending: Map.put(state.pending, task.task_id, task)
+        new_state = %{
+          state
+          | queue: new_queue,
+            pending: Map.put(state.pending, task.task_id, task)
         }
 
         Logger.debug("[TaskQueue] Pulled task #{short_id(task.task_id)}")
@@ -150,10 +148,7 @@ defmodule Axiom.Scheduler.TaskQueue do
         updated_task = %{task | attempt: task.attempt + 1}
         new_queue = :queue.in(updated_task, state.queue)
 
-        new_state = %{state |
-          queue: new_queue,
-          pending: new_pending
-        }
+        new_state = %{state | queue: new_queue, pending: new_pending}
 
         Logger.debug("[TaskQueue] Requeued task #{short_id(task_id)}")
         {:reply, :ok, new_state}

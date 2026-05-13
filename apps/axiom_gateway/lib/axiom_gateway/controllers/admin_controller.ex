@@ -1,7 +1,7 @@
 defmodule AxiomGateway.Controllers.AdminController do
   use Phoenix.Controller
 
-  action_fallback AxiomGateway.Controllers.FallbackController
+  action_fallback(AxiomGateway.Controllers.FallbackController)
 
   def run_chaos(conn, %{"scenario" => scenario} = params) do
     duration_ms = Map.get(params, "duration_ms", 10_000)

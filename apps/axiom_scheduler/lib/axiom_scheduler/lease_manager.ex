@@ -125,9 +125,10 @@ defmodule Axiom.Scheduler.LeaseManager do
     )
 
     # Update state
-    new_state = %{state |
-      active_leases: Map.put(state.active_leases, lease.lease_id, lease),
-      fencing_tokens: Map.put(state.fencing_tokens, key, new_token)
+    new_state = %{
+      state
+      | active_leases: Map.put(state.active_leases, lease.lease_id, lease),
+        fencing_tokens: Map.put(state.fencing_tokens, key, new_token)
     }
 
     Logger.debug("[LeaseManager] Lease acquired: #{short_id(lease.lease_id)} for #{workflow_id}:#{step} (token=#{new_token})")
@@ -136,37 +137,39 @@ defmodule Axiom.Scheduler.LeaseManager do
 
   @impl true
   def handle_call({:check_lease, lease_id}, _from, state) do
-    result = case Map.get(state.active_leases, lease_id) do
-      nil -> :lease_unknown
-      lease -> if Lease.valid?(lease), do: :lease_valid, else: :lease_expired
-    end
+    result =
+      case Map.get(state.active_leases, lease_id) do
+        nil -> :lease_unknown
+        lease -> if Lease.valid?(lease), do: :lease_valid, else: :lease_expired
+      end
 
     {:reply, result, state}
   end
 
   @impl true
   def handle_call({:validate_for_commit, lease_id, fencing_token}, _from, state) do
-    result = case Map.get(state.active_leases, lease_id) do
-      nil ->
-        {:error, :lease_unknown}
+    result =
+      case Map.get(state.active_leases, lease_id) do
+        nil ->
+          {:error, :lease_unknown}
 
-      lease ->
-        current_highest = Map.get(state.fencing_tokens, {lease.workflow_id, lease.step}, 0)
+        lease ->
+          current_highest = Map.get(state.fencing_tokens, {lease.workflow_id, lease.step}, 0)
 
-        cond do
-          Lease.expired?(lease) ->
-            {:error, :lease_expired}
+          cond do
+            Lease.expired?(lease) ->
+              {:error, :lease_expired}
 
-          lease.fencing_token != fencing_token ->
-            {:error, :fencing_token_stale}
+            lease.fencing_token != fencing_token ->
+              {:error, :fencing_token_stale}
 
-          fencing_token < current_highest ->
-            {:error, :fencing_token_stale}
+            fencing_token < current_highest ->
+              {:error, :fencing_token_stale}
 
-          true ->
-            :ok
-        end
-    end
+            true ->
+              :ok
+          end
+      end
 
     {:reply, result, state}
   end
@@ -179,7 +182,8 @@ defmodule Axiom.Scheduler.LeaseManager do
 
   @impl true
   def handle_call(:list_active_leases, _from, state) do
-    active = state.active_leases
+    active =
+      state.active_leases
       |> Map.values()
       |> Enum.filter(&Lease.valid?/1)
     {:reply, active, state}
@@ -195,7 +199,8 @@ defmodule Axiom.Scheduler.LeaseManager do
   @impl true
   def handle_info(:cleanup_expired, state) do
     # Remove expired leases
-    {expired, active} = state.active_leases
+    {expired, active} =
+      state.active_leases
       |> Enum.split_with(fn {_id, lease} -> Lease.expired?(lease) end)
 
     if length(expired) > 0 do

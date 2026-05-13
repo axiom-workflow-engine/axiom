@@ -17,39 +17,43 @@ defmodule AxiomGateway.Endpoint do
   ]
 
   # Serve static assets if needed
-  plug Plug.Static,
+  plug(Plug.Static,
     at: "/",
     from: :axiom_gateway,
     gzip: false,
     only: AxiomGateway.static_paths()
+  )
 
   # Request ID for tracing
-  plug Plug.RequestId
+  plug(Plug.RequestId)
 
   # Telemetry for request timing
-  plug Plug.Telemetry, event_prefix: [:axiom, :gateway, :endpoint]
+  plug(Plug.Telemetry, event_prefix: [:axiom, :gateway, :endpoint])
 
   # Parse request body
-  plug Plug.Parsers,
+  plug(Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],
     json_decoder: Jason,
-    length: 10_000_000  # 10MB max body
+    # 10MB max body
+    length: 10_000_000
+  )
 
   # Method override for HTML forms
-  plug Plug.MethodOverride
+  plug(Plug.MethodOverride)
 
   # Enable sessions
-  plug Plug.Session, @session_options
+  plug(Plug.Session, @session_options)
 
   # CORS for cross-origin requests
-  plug CORSPlug,
+  plug(CORSPlug,
     origin: &AxiomGateway.Endpoint.cors_origins/0,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     headers: ["Authorization", "Content-Type", "X-Api-Key", "Idempotency-Key", "X-Request-Id"]
+  )
 
   # Main router
-  plug AxiomGateway.Router
+  plug(AxiomGateway.Router)
 
   @doc """
   Returns allowed CORS origins from configuration.

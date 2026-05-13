@@ -17,9 +17,10 @@ defmodule Axiom.API.Health do
 
     %{
       healthy: failed == [],
-      checks: Map.new(checks, fn {name, status} ->
-        {name, if(status == :ok, do: "ok", else: "failed")}
-      end),
+      checks:
+        Map.new(checks, fn {name, status} ->
+          {name, if(status == :ok, do: "ok", else: "failed")}
+        end),
       timestamp: System.system_time(:millisecond)
     }
   end

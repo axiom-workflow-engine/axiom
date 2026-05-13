@@ -74,7 +74,8 @@ defmodule Axiom.API.Metrics do
 
   defp wal_metrics do
     case GenServer.whereis(Axiom.WAL.LogAppendServer) do
-      nil -> %{status: "not_running", offset: 0}
+      nil ->
+        %{status: "not_running", offset: 0}
       pid ->
         offset = Axiom.WAL.LogAppendServer.current_offset(pid)
         %{status: "running", offset: offset}
@@ -107,6 +108,7 @@ defmodule Axiom.API.Metrics do
   defp engine_metrics do
     try do
       workflows = AxiomGateway.Projections.WorkflowIndex.list_workflows(100_000)
+
       %{
         active_workflows: Enum.count(workflows, &(&1.status == "running")),
         completed_workflows: Enum.count(workflows, &(&1.status == "completed")),

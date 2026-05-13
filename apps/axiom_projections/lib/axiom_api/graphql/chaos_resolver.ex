@@ -14,16 +14,28 @@ defmodule Axiom.API.GraphQL.ChaosResolver do
     # Run async to not block the request
     Task.start(fn -> AxiomChaos.run(scenario, duration_ms: duration) end)
 
-    {:ok, %{success: true, message: "Chaos scenario '#{scenario}' started"}}
+    {:ok,
+     %{
+       success: true,
+       message: "Chaos scenario '#{scenario}' started"
+     }}
   end
 
   def verify(_parent, _args, _context) do
     case AxiomChaos.verify() do
       {:ok, _result} ->
-        {:ok, %{success: true, message: "All consistency checks passed"}}
+        {:ok,
+         %{
+           success: true,
+           message: "All consistency checks passed"
+         }}
 
       {:error, result} ->
-        {:ok, %{success: false, message: "Checks failed: #{inspect(result.failures)}"}}
+        {:ok,
+         %{
+           success: false,
+           message: "Checks failed: #{inspect(result.failures)}"
+         }}
     end
   end
 end

@@ -3,7 +3,7 @@ defmodule AxiomGateway.Controllers.WorkflowController do
 
   alias AxiomGateway.Durable.Acceptor
 
-  action_fallback AxiomGateway.Controllers.FallbackController
+  action_fallback(AxiomGateway.Controllers.FallbackController)
 
   alias Axiom.WAL.LogAppendServer
   alias Axiom.Engine.StateMachine
@@ -18,21 +18,21 @@ defmodule AxiomGateway.Controllers.WorkflowController do
     # 1. Try running process
     case Registry.lookup(Axiom.Engine.Registry, id) do
       [{pid, _}] ->
-         state_machine = Axiom.Engine.WorkflowProcess.get_state(pid)
-         json(conn, %{data: serialize_state(state_machine)})
+        state_machine = Axiom.Engine.WorkflowProcess.get_state(pid)
+        json(conn, %{data: serialize_state(state_machine)})
 
       [] ->
-         # 2. If not running, rehydrate from WAL (Ephemeral Read)
-         case LogAppendServer.replay(LogAppendServer, id) do
-           {:ok, events} when events != [] ->
-              state_machine = StateMachine.hydrate(id, events)
-              json(conn, %{data: serialize_state(state_machine)})
+        # 2. If not running, rehydrate from WAL (Ephemeral Read)
+        case LogAppendServer.replay(LogAppendServer, id) do
+          {:ok, events} when events != [] ->
+            state_machine = StateMachine.hydrate(id, events)
+            json(conn, %{data: serialize_state(state_machine)})
 
-           _ ->
-              conn
-              |> put_status(:not_found)
-              |> json(%{error: "Workflow not found"})
-         end
+          _ ->
+            conn
+            |> put_status(:not_found)
+            |> json(%{error: "Workflow not found"})
+        end
     end
   end
 
@@ -40,6 +40,7 @@ defmodule AxiomGateway.Controllers.WorkflowController do
     case LogAppendServer.replay(LogAppendServer, id) do
       {:ok, events} ->
         json(conn, %{data: events})
+
       {:error, reason} ->
         conn
         |> put_status(:internal_server_error)
@@ -51,7 +52,8 @@ defmodule AxiomGateway.Controllers.WorkflowController do
     %{
       id: sm.workflow_id,
       status: if(StateMachine.terminal?(sm), do: "completed", else: "running"),
-      current_step: List.first(sm.steps), # Simplified
+      # Simplified
+      current_step: List.first(sm.steps),
       version: sm.version,
       context: sm.context
     }
@@ -87,6 +89,7 @@ defmodule AxiomGateway.Controllers.WorkflowController do
     case Acceptor.accept_cancellation(id, identity) do
       :ok ->
         json(conn, %{status: "cancelled"})
+
       error ->
         error
     end
@@ -97,19 +100,21 @@ defmodule AxiomGateway.Controllers.WorkflowController do
 
     case Acceptor.accept_advancement(id, identity) do
       :ok ->
-         json(conn, %{status: "advanced"})
+      :ok ->
+        json(conn, %{status: "advanced"})
+
       error ->
-         error
+        error
     end
   end
 
   def lease(conn, %{"id" => id}) do
-     # Worker polling endpoint
-     json(conn, %{task: nil})
+    # Worker polling endpoint
+    json(conn, %{task: nil})
   end
 
   def submit_result(conn, %{"id" => id}) do
-     # Worker result submission
-     json(conn, %{status: "result_accepted"})
+    # Worker result submission
+    json(conn, %{status: "result_accepted"})
   end
 end

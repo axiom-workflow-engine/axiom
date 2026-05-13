@@ -61,7 +61,8 @@ defmodule Axiom.Core.Events do
   @doc """
   Creates a StepStarted event.
   """
-  @spec step_started(binary(), non_neg_integer(), atom(), binary(), binary(), keyword()) :: Event.t()
+  @spec step_started(binary(), non_neg_integer(), atom(), binary(), binary(), keyword()) ::
+          Event.t()
   def step_started(workflow_id, sequence, step, lease_id, worker_id, opts \\ []) do
     Event.new(
       :step_started,
@@ -85,7 +86,8 @@ defmodule Axiom.Core.Events do
   @doc """
   Creates a StepCompleted event.
   """
-  @spec step_completed(binary(), non_neg_integer(), atom(), map(), non_neg_integer(), keyword()) :: Event.t()
+  @spec step_completed(binary(), non_neg_integer(), atom(), map(), non_neg_integer(), keyword()) ::
+          Event.t()
   def step_completed(workflow_id, sequence, step, result, duration_ms, opts \\ []) do
     Event.new(
       :step_completed,
@@ -165,6 +167,7 @@ defmodule Axiom.Core.Events do
       opts
     )
   end
+
   # ============================================================================
   # WorkflowCancelled (v1)
   # Terminal - user initiated validation

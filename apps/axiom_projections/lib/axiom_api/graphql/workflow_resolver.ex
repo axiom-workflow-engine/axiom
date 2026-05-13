@@ -39,6 +39,7 @@ defmodule Axiom.API.GraphQL.WorkflowResolver do
     case Workflows.advance(id) do
       :ok ->
         {:ok, %{success: true, message: "Workflow advanced", id: id}}
+
       {:error, reason} ->
         {:ok, %{success: false, message: inspect(reason), id: id}}
     end

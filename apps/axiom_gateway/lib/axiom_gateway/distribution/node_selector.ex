@@ -15,8 +15,9 @@ defmodule AxiomGateway.Distribution.NodeSelector do
     nodes = [Node.self() | Node.list()]
 
     # Create the consistent hash ring
-    ring = LibRing.new()
-    |> LibRing.add_nodes(nodes)
+    ring =
+      LibRing.new()
+      |> LibRing.add_nodes(nodes)
 
     # Map the workflow ID to a specific node
     LibRing.key_to_node(ring, workflow_id)

@@ -37,10 +37,23 @@ defmodule AxiomGateway.RouterIntegrationTest do
     conn = conn(:get, "/api/v1/openapi.json") |> dispatch()
 
     assert conn.status == 200
+    assert get_resp_header(conn, "content-type") |> hd() =~ "application/json"
 
     body = Jason.decode!(conn.resp_body)
-    assert body["openapi"] == "3.0.3"
+    assert body["openapi"] =~ ~r/^3\./
     assert is_map(body["paths"])
+    assert map_size(body["paths"]) > 0
+  end
+
+  test "GET /api/v1/openapi.yaml serves openapi spec as yaml" do
+    conn = conn(:get, "/api/v1/openapi.yaml") |> dispatch()
+
+    assert conn.status == 200
+    content_type = get_resp_header(conn, "content-type") |> hd()
+    assert content_type =~ "yaml"
+
+    # The served YAML must parse back to the same openapi version
+    assert conn.resp_body =~ ~r/^openapi:\s*["']?3\./
   end
 
   test "POST /api/v1/webhooks/:id accepts webhook payload" do

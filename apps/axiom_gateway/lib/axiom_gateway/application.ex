@@ -38,6 +38,12 @@ defmodule AxiomGateway.Application do
       # Schema Registry (Mnesia-backed)
       AxiomGateway.Schemas.Store,
 
+      # Webhook signing registry (Mnesia-backed)
+      AxiomGateway.Webhooks.Registry,
+
+      # Webhook delivery log (Mnesia-backed)
+      AxiomGateway.Webhooks.DeliveryLog,
+
       # Rate limiter state
       AxiomGateway.RateLimiter,
 

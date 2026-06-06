@@ -25,7 +25,7 @@ defmodule AxiomGateway.MixProject do
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_), do: ["lib"]
+  defp elixirc_paths(_), do: ["lib", "priv"]
 
   defp deps do
     [
@@ -49,6 +49,7 @@ defmodule AxiomGateway.MixProject do
 
       # Schema Validation
       {:ex_json_schema, "~> 0.9"},
+      {:yaml_elixir, "~> 2.9"},
 
       # Observability
       {:telemetry, "~> 1.2"},

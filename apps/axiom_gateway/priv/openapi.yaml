@@ -1,0 +1,954 @@
+openapi: 3.1.0
+info:
+  title: Axiom Workflow Engine API
+  description: |
+    Axiom is a durable, exactly-once, crash-safe workflow execution engine.
+    
+    ## Authentication
+    
+    All API requests require authentication via one of:
+    - **API Key**: Pass `X-Api-Key: ak_live_xxx` header
+    - **JWT**: Pass `Authorization: Bearer <token>` header
+    
+    ## Idempotency
+    
+    All mutation endpoints require an `Idempotency-Key` header with a UUID v4.
+    Duplicate requests with the same key return the cached response.
+    
+    ## Rate Limiting
+    
+    - REST: 100 requests/minute per tenant
+    - Headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `Retry-After`
+  version: 1.0.0
+  contact:
+    name: Axiom Team
+    url: https://github.com/axiom-workflow-engine/axiom
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:4000
+    description: Local development
+  - url: https://api.axiom.example.com
+    description: Production
+
+security:
+  - ApiKeyAuth: []
+  - BearerAuth: []
+
+tags:
+  - name: Workflows
+    description: Workflow lifecycle management
+  - name: Tasks
+    description: Task queue operations
+  - name: Schemas
+    description: Workflow schema governance
+  - name: Health
+    description: Health and readiness probes
+  - name: Metrics
+    description: Observability endpoints
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Liveness probe
+      operationId: getHealth
+      security: []
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /ready:
+    get:
+      tags: [Health]
+      summary: Readiness probe
+      operationId: getReady
+      security: []
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ready
+
+  /api/v1/workflows:
+    get:
+      tags: [Workflows]
+      summary: List workflows
+      operationId: listWorkflows
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/WorkflowStatus'
+        - name: name
+          in: query
+          description: Filter by workflow name
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of workflows
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Workflow'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+    post:
+      tags: [Workflows]
+      summary: Create a workflow
+      operationId: createWorkflow
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkflowRequest'
+      responses:
+        '201':
+          description: Workflow created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Workflow'
+        '200':
+          description: Idempotent replay
+          headers:
+            X-Idempotent-Replay:
+              schema:
+                type: boolean
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Workflow'
+        '409':
+          description: Idempotency key conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/workflows/bulk:
+    post:
+      tags: [Workflows]
+      summary: Bulk create workflows
+      operationId: bulkCreateWorkflows
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [workflows]
+              properties:
+                workflows:
+                  type: array
+                  maxItems: 100
+                  items:
+                    $ref: '#/components/schemas/CreateWorkflowRequest'
+      responses:
+        '201':
+          description: Workflows created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Workflow'
+                  errors:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BulkError'
+
+  /api/v1/workflows/{workflowId}:
+    get:
+      tags: [Workflows]
+      summary: Get workflow by ID
+      operationId: getWorkflow
+      parameters:
+        - $ref: '#/components/parameters/WorkflowId'
+      responses:
+        '200':
+          description: Workflow details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Workflow'
+        '404':
+          description: Workflow not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/workflows/{workflowId}/events:
+    get:
+      tags: [Workflows]
+      summary: Get workflow event history
+      operationId: getWorkflowEvents
+      parameters:
+        - $ref: '#/components/parameters/WorkflowId'
+        - name: from_sequence
+          in: query
+          description: Start from this sequence number
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Event history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+
+  /api/v1/workflows/{workflowId}/cancel:
+    post:
+      tags: [Workflows]
+      summary: Cancel a workflow
+      operationId: cancelWorkflow
+      parameters:
+        - $ref: '#/components/parameters/WorkflowId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: Cancellation reason
+      responses:
+        '200':
+          description: Workflow cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Workflow'
+        '409':
+          description: Workflow already terminal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/workflows/{workflowId}/advance:
+    post:
+      tags: [Workflows]
+      summary: Manually advance workflow
+      operationId: advanceWorkflow
+      parameters:
+        - $ref: '#/components/parameters/WorkflowId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                step:
+                  type: string
+                  description: Step to advance to
+                result:
+                  type: object
+                  description: Step result to inject
+      responses:
+        '200':
+          description: Workflow advanced
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Workflow'
+
+  /api/v1/workflows/{workflowId}/lease:
+    get:
+      tags: [Tasks]
+      summary: Poll for task with lease
+      operationId: pollLease
+      description: |
+        Workers call this to acquire a task lease. Returns the next pending step
+        with a time-bounded lease and fencing token.
+      parameters:
+        - $ref: '#/components/parameters/WorkflowId'
+        - name: worker_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task acquired
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Lease'
+        '204':
+          description: No pending tasks
+        '409':
+          description: Task already leased
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/workflows/{workflowId}/result:
+    post:
+      tags: [Tasks]
+      summary: Submit step result
+      operationId: submitResult
+      description: |
+        Workers submit step execution results. Must include the fencing token
+        from the lease. Stale tokens are rejected.
+      parameters:
+        - $ref: '#/components/parameters/WorkflowId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitResultRequest'
+      responses:
+        '200':
+          description: Result accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Workflow'
+        '409':
+          description: Fencing token rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/v1/tasks:
+    get:
+      tags: [Tasks]
+      summary: List tasks
+      operationId: listTasks
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, running, completed, failed]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+
+  /api/v1/tasks/{taskId}:
+    get:
+      tags: [Tasks]
+      summary: Get task details
+      operationId: getTask
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+
+  /api/v1/schemas/workflows:
+    get:
+      tags: [Schemas]
+      summary: List workflow schemas
+      operationId: listSchemas
+      responses:
+        '200':
+          description: List of schemas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WorkflowSchema'
+
+    post:
+      tags: [Schemas]
+      summary: Register workflow schema
+      operationId: registerSchema
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterSchemaRequest'
+      responses:
+        '201':
+          description: Schema registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/WorkflowSchema'
+
+  /api/v1/schemas/workflows/{schemaName}:
+    get:
+      tags: [Schemas]
+      summary: Get workflow schema
+      operationId: getSchema
+      parameters:
+        - name: schemaName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Schema definition
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/WorkflowSchema'
+
+  /api/v1/metrics:
+    get:
+      tags: [Metrics]
+      summary: Get system metrics
+      operationId: getMetrics
+      responses:
+        '200':
+          description: Metrics in JSON format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Metrics'
+
+  /api/v1/metrics/prometheus:
+    get:
+      tags: [Metrics]
+      summary: Get Prometheus metrics
+      operationId: getPrometheusMetrics
+      responses:
+        '200':
+          description: Metrics in Prometheus format
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /api/v1/webhooks/{webhookId}:
+    post:
+      tags: [Workflows]
+      summary: Receive webhook
+      operationId: receiveWebhook
+      description: |
+        External systems can trigger workflow events via webhooks.
+        Requires HMAC-SHA256 signature in X-Webhook-Signature header.
+      parameters:
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: X-Webhook-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Webhook processed
+        '401':
+          description: Invalid signature
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    WorkflowId:
+      name: workflowId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Workflow unique identifier
+
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Unique key for idempotent requests
+
+  schemas:
+    Workflow:
+      type: object
+      required: [id, name, status, steps, version, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: order_fulfillment_v1
+        status:
+          $ref: '#/components/schemas/WorkflowStatus'
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/Step'
+        current_step:
+          type: string
+          nullable: true
+        current_step_index:
+          type: integer
+        input:
+          type: object
+          nullable: true
+        output:
+          type: object
+          nullable: true
+        error:
+          type: object
+          nullable: true
+          properties:
+            message:
+              type: string
+            code:
+              type: string
+            retryable:
+              type: boolean
+        version:
+          type: integer
+          description: Event count (optimistic locking)
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    WorkflowStatus:
+      type: string
+      enum: [pending, running, waiting, completed, failed, cancelled]
+
+    Step:
+      type: object
+      required: [name, status]
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+          enum: [pending, scheduled, running, completed, failed]
+        attempt:
+          type: integer
+        result:
+          type: object
+          nullable: true
+        error:
+          type: object
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        duration_ms:
+          type: integer
+          nullable: true
+
+    Event:
+      type: object
+      required: [event_id, event_type, workflow_id, sequence, timestamp]
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+          enum:
+            - workflow_created
+            - step_scheduled
+            - step_started
+            - step_completed
+            - step_failed
+            - workflow_completed
+            - workflow_failed
+            - workflow_cancelled
+        schema_version:
+          type: integer
+        workflow_id:
+          type: string
+          format: uuid
+        sequence:
+          type: integer
+          description: Ordering within workflow
+        causation_id:
+          type: string
+          format: uuid
+          nullable: true
+        correlation_id:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        payload:
+          type: object
+        metadata:
+          type: object
+
+    Lease:
+      type: object
+      required: [lease_id, workflow_id, step, attempt, fencing_token, expires_at]
+      properties:
+        lease_id:
+          type: string
+          format: uuid
+        workflow_id:
+          type: string
+          format: uuid
+        step:
+          type: string
+        attempt:
+          type: integer
+        fencing_token:
+          type: integer
+          description: Monotonic token, must be passed with result
+        expires_at:
+          type: string
+          format: date-time
+        input:
+          type: object
+          description: Workflow input for step execution
+
+    Task:
+      type: object
+      required: [task_id, workflow_id, step, status]
+      properties:
+        task_id:
+          type: string
+          format: uuid
+        workflow_id:
+          type: string
+          format: uuid
+        step:
+          type: string
+        attempt:
+          type: integer
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+        priority:
+          type: integer
+        enqueued_at:
+          type: string
+          format: date-time
+        lease:
+          $ref: '#/components/schemas/Lease'
+          nullable: true
+
+    CreateWorkflowRequest:
+      type: object
+      required: [name, steps]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Optional client-provided ID
+        name:
+          type: string
+          example: order_fulfillment_v1
+        steps:
+          type: array
+          minItems: 1
+          items:
+            type: string
+          example: ["RESERVE_INVENTORY", "PROCESS_PAYMENT", "DISPATCH"]
+        input:
+          type: object
+          description: Initial workflow input
+
+    SubmitResultRequest:
+      type: object
+      required: [lease_id, fencing_token, status]
+      properties:
+        lease_id:
+          type: string
+          format: uuid
+        fencing_token:
+          type: integer
+          description: Must match the token from the lease
+        status:
+          type: string
+          enum: [completed, failed]
+        result:
+          type: object
+          description: Step output (for completed)
+        error:
+          type: object
+          description: Error details (for failed)
+          properties:
+            message:
+              type: string
+            code:
+              type: string
+            retryable:
+              type: boolean
+              default: true
+
+    WorkflowSchema:
+      type: object
+      required: [name, version, steps]
+      properties:
+        name:
+          type: string
+        version:
+          type: integer
+        steps:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              timeout_ms:
+                type: integer
+              retry_policy:
+                type: object
+                properties:
+                  max_attempts:
+                    type: integer
+                  backoff_ms:
+                    type: integer
+        input_schema:
+          type: object
+          description: JSON Schema for input validation
+        created_at:
+          type: string
+          format: date-time
+
+    RegisterSchemaRequest:
+      type: object
+      required: [name, steps]
+      properties:
+        name:
+          type: string
+        steps:
+          type: array
+          items:
+            type: object
+            required: [name]
+            properties:
+              name:
+                type: string
+              timeout_ms:
+                type: integer
+                default: 30000
+              retry_policy:
+                type: object
+                properties:
+                  max_attempts:
+                    type: integer
+                    default: 3
+                  backoff_ms:
+                    type: integer
+                    default: 1000
+        input_schema:
+          type: object
+
+    Metrics:
+      type: object
+      properties:
+        workflows:
+          type: object
+          properties:
+            total:
+              type: integer
+            by_status:
+              type: object
+              additionalProperties:
+                type: integer
+        tasks:
+          type: object
+          properties:
+            pending:
+              type: integer
+            running:
+              type: integer
+        workers:
+          type: object
+          properties:
+            active:
+              type: integer
+
+    PaginationMeta:
+      type: object
+      properties:
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        has_more:
+          type: boolean
+
+    ProblemDetails:
+      type: object
+      description: RFC 7807 Problem Details
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+          example: https://axiom.dev/errors/validation-failed
+        title:
+          type: string
+          example: Validation Failed
+        status:
+          type: integer
+          example: 422
+        detail:
+          type: string
+        instance:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              code:
+                type: string
+              message:
+                type: string
+
+    BulkError:
+      type: object
+      properties:
+        index:
+          type: integer
+        error:
+          $ref: '#/components/schemas/ProblemDetails'

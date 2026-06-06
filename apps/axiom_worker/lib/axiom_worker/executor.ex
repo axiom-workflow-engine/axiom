@@ -232,8 +232,24 @@ defmodule Axiom.Worker.Executor do
     end
   end
 
+  # Default handler used only when the worker is started without a
+  # `:handler_fn` option (e.g. in dev/test where you just want to see
+  # the engine run a workflow end-to-end without side effects).
+  #
+  # In production, ALWAYS pass a real `:handler_fn` to
+  # `AxiomWorker.start_worker/1`. This function exists so that a
+  # misconfigured worker fails loudly (it returns successfully for
+  # every step regardless of what was asked, which is the wrong
+  # default for real workloads — you almost certainly want a
+  # `Map.get(context, "input")` dispatcher that routes steps to
+  # actual side-effect code).
   defp default_handler(step, _context) do
-    # Default handler just succeeds after a small delay
+    Logger.warning(
+      "[Worker:#{step}] No :handler_fn configured; using no-op default. " <>
+        "Pass handler_fn: &MyApp.Worker.handle/2 to AxiomWorker.start_worker/1 " <>
+        "to run real work."
+    )
+
     Process.sleep(10)
     {:ok, %{step: step, executed_at: Event.logical_time()}}
   end

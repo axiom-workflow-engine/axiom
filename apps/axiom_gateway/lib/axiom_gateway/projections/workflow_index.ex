@@ -5,6 +5,7 @@ defmodule AxiomGateway.Projections.WorkflowIndex do
   Subscribes to the WAL and updates the status of workflows.
   Source of truth for list/query operations.
   """
+
   use GenServer
   require Logger
   alias Axiom.WAL.LogAppendServer
@@ -21,25 +22,49 @@ defmodule AxiomGateway.Projections.WorkflowIndex do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
-  def list_workflows(limit \\ 100) do
-    # Select most recent workflows.
-    # Note: Mnesia set tables are not ordered, so this returns an arbitrary set of records.
-    # For strict ordering, an ordered_set or secondary index on timestamp would be required.
-    # Given the constraints, we select effectively.
-    match_spec = [{
-      {__MODULE__, :"$1", :"$2", :"$3", :"$4", :"$5"},
-      [],
-      [%{id: :"$1", name: :"$2", status: :"$3", created_at: :"$4", updated_at: :"$5"}]
-    }]
+  @doc """
+  Lists workflows with optional filters and pagination.
+
+  Options:
+    * `:limit` — max records to return (default 100, max 1_000)
+    * `:offset` — records to skip (default 0)
+    * `:status` — filter by status (string or nil)
+    * `:name` — filter by workflow name (exact match, or nil)
+
+  Returns most-recently-updated first. Mnesia set tables are not
+  inherently ordered, so we sort at read time.
+  """
+  @spec list_workflows(keyword()) :: [map()]
+  def list_workflows(opts \\ []) do
+    limit = Keyword.get(opts, :limit, 100) |> clamp(1, 1_000)
+    offset = Keyword.get(opts, :offset, 0) |> max(0)
+    status = Keyword.get(opts, :status)
+    name = Keyword.get(opts, :name)
+
+    match_spec = build_match_spec(status, name)
 
     :mnesia.dirty_select(@table_name, match_spec)
+    |> Enum.sort_by(& &1.updated_at, {:desc, DateTime})
+    |> Stream.drop(offset)
     |> Enum.take(limit)
+  end
+
+  @doc """
+  Returns the total number of workflows matching the given filters.
+  """
+  @spec count_workflows(keyword()) :: non_neg_integer()
+  def count_workflows(opts \\ []) do
+    status = Keyword.get(opts, :status)
+    name = Keyword.get(opts, :name)
+    match_spec = build_match_spec(status, name)
+    :mnesia.dirty_select(@table_name, match_spec) |> length()
   end
 
   def get_workflow(id) do
     case :mnesia.dirty_read(@table_name, id) do
       [{__MODULE__, ^id, name, status, created, updated}] ->
         {:ok, %{id: id, name: name, status: status, created_at: created, updated_at: updated}}
+
       [] ->
         {:error, :not_found}
     end
@@ -75,6 +100,7 @@ defmodule AxiomGateway.Projections.WorkflowIndex do
           timestamp,
           timestamp
         }
+
         :mnesia.dirty_write(@table_name, record)
 
       :workflow_completed ->
@@ -83,12 +109,11 @@ defmodule AxiomGateway.Projections.WorkflowIndex do
       :workflow_cancelled ->
         update_status(event.workflow_id, "cancelled", timestamp)
 
-      :step_failed ->
-         # Optional: track detailed status?
-         # For index, maybe just keep it simple.
-         :ok
+      :workflow_failed ->
+        update_status(event.workflow_id, "failed", timestamp)
 
-       _ -> :ok
+      _ ->
+        :ok
     end
   end
 
@@ -96,10 +121,37 @@ defmodule AxiomGateway.Projections.WorkflowIndex do
     case :mnesia.dirty_read(@table_name, id) do
       [{__MODULE__, ^id, name, _old_status, created, _updated}] ->
         :mnesia.dirty_write(@table_name, {__MODULE__, id, name, status, created, timestamp})
+
       [] ->
-        # Should not happen unless gap in hydration
         :ok
     end
+  end
+
+  defp build_match_spec(status, name) do
+    guards = build_guards(status, name)
+
+    [
+      {{
+         __MODULE__,
+         :"$1",
+         :"$2",
+         :"$3",
+         :"$4",
+         :"$5"
+       }, guards,
+       [%{id: :"$1", name: :"$2", status: :"$3", created_at: :"$4", updated_at: :"$5"}]}
+    ]
+  end
+
+  defp build_guards(nil, nil), do: []
+  defp build_guards(status, nil), do: [{:===, :"$3", status}]
+  defp build_guards(nil, name), do: [{:===, :"$2", name}]
+  defp build_guards(status, name), do: [{:andalso, {:===, :"$3", status}, {:===, :"$2", name}}]
+
+  defp clamp(value, min, max) do
+    value
+    |> max(min)
+    |> min(max)
   end
 
   defp init_mnesia do
@@ -111,7 +163,7 @@ defmodule AxiomGateway.Projections.WorkflowIndex do
     case :mnesia.create_table(@table_name, [
            attributes: [:id, :name, :status, :created_at, :updated_at],
            disc_copies: nodes,
-           type: :set # ID is primary key
+           type: :set
          ]) do
       {:atomic, :ok} -> Logger.info("Created WorkflowIndex projection")
       {:aborted, {:already_exists, _}} -> :ok

@@ -92,11 +92,12 @@ defmodule AxiomGateway.Router do
     post("/:webhook_id", WebhookController, :receive)
   end
 
-  # OpenAPI specification
+  # OpenAPI specification (single source of truth, shared with SDKs)
   scope "/api/v1", AxiomGateway.Controllers do
     pipe_through(:api)
 
     get("/openapi.json", OpenApiController, :spec)
+    get("/openapi.yaml", OpenApiController, :yaml)
   end
 
   # GraphQL
@@ -110,12 +111,11 @@ defmodule AxiomGateway.Router do
     forward("/", Absinthe.Plug, schema: AxiomGateway.GraphQL.Schema)
   end
 
-  # GraphiQL (interface)
+  # GraphiQL (dev only — dev tool for exploring the schema. Must
+  # never be exposed in production: the playground is unauthenticated
+  # and allows arbitrary queries.)
   if Mix.env() == :dev do
     scope "/graphiql" do
-      # Relaxed auth for dev UI? Or require basic auth?
-      # For dev, we often skip strict auth or mock it.
-      # Let's keep it open or assume dev has headers.
       pipe_through([:api, :graphql])
 
       forward("/", Absinthe.Plug.GraphiQL,

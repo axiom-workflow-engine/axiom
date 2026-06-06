@@ -1,0 +1,37 @@
+{{- if .Values.rbac.create }}
+{{- $fullname := include "axiom-engine.fullname" . }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $fullname }}
+  labels:
+    {{- include "axiom-engine.labels" . | nindent 4 }}
+rules:
+  # Allow the engine to look up its own pod identity (used for cluster
+  # formation and lease-aware scheduling when running in k8s).
+  - apiGroups: [""]
+    resources: ["pods", "services", "endpoints", "configmaps"]
+    verbs: ["get", "list", "watch"]
+  # Allow the engine to read its own pod events for observability.
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list", "watch"]
+  {{- with .Values.rbac.extraRules }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $fullname }}
+  labels:
+    {{- include "axiom-engine.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $fullname }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "axiom-engine.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

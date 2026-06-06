@@ -183,4 +183,48 @@ metrics:
   serviceMonitor:
     enabled: false
     interval: 30s
+    scrapeTimeout: 10s
+    path: /api/v1/metrics
+    honorLabels: false
     labels: {}
+
+# ──────────────────────────────────────────────────────────────
+# Pod Disruption Budget
+# Set to minAvailable: 1 by default. With 3 replicas this allows
+# one pod to be drained at a time, protecting quorum.
+# ──────────────────────────────────────────────────────────────
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+  # maxUnavailable: 1
+
+# ──────────────────────────────────────────────────────────────
+# RBAC — minimal k8s read access for cluster formation
+# Disable for fully air-gapped deployments.
+# ──────────────────────────────────────────────────────────────
+rbac:
+  create: true
+  # extraRules: []
+
+# ──────────────────────────────────────────────────────────────
+# External Secrets (cloud-agnostic via External Secrets Operator)
+# When enabled, the auto-generated Secret is suppressed. Provide
+# either a SecretStore (namespace-scoped) or ClusterSecretStore name.
+# ──────────────────────────────────────────────────────────────
+externalSecret:
+  enabled: false
+  # secretStoreName: axiom-secrets
+  # secretStoreKind: SecretStore  # or ClusterSecretStore
+  # refreshInterval: 1h
+  # targetName: axiom-engine-secrets
+  # creationPolicy: Owner
+  data:
+    # - secretKey: erlang-cookie
+    #   remoteRef:
+    #     key: axiom/engine/erlang-cookie
+    # - secretKey: secret-key-base
+    #   remoteRef:
+    #     key: axiom/engine/secret-key-base
+    # - secretKey: jwt-secret
+    #   remoteRef:
+    #     key: axiom/engine/jwt-secret
